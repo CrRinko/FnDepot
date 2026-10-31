@@ -1,0 +1,8 @@
+# Large FPK artifacts are published as GitHub Release assets, not committed.
+*.fpk
+*.fpk.sha256
+dist/
+
+# Host metadata
+.DS_Store
+Thumbs.db

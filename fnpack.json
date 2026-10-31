@@ -1,0 +1,52 @@
+{
+  "schema_version": "2",
+  "source_info": {
+    "name": "CrRinko 的 FnOS 应用源",
+    "author": "CrRinko",
+    "homepage": "https://github.com/CrRinko/FnDepot",
+    "description": "个人 FnOS 应用源，提供 OpenCode V2 等应用。"
+  },
+  "apps": {
+    "opencode": {
+      "display_name": "OpenCode V2",
+      "desc": "开源 AI 编程代理，提供 Web UI 与 CLI。本包基于上游 OpenCode V2.2.5 linux-amd64 构建，仅适用于 x86 设备。",
+      "i18n": {
+        "en-US": {
+          "display_name": "OpenCode V2",
+          "desc": "Open-source AI coding agent with a Web UI and CLI. Built from upstream OpenCode V2.2.5 linux-amd64 for x86 devices only."
+        }
+      },
+      "platform": ["x86"],
+      "categories": ["编程开发", "AI赋能"],
+      "icon_url": "apps/opencode/icon-256.png",
+      "readme_url": "apps/opencode/README.md",
+      "bug_report_url": "https://github.com/CrRinko/FnDepot/issues",
+      "maintainer": "OpenCode",
+      "maintainer_url": "https://github.com/anomalyco/opencode",
+      "distributor": "CrRinko",
+      "distributor_url": "https://github.com/CrRinko",
+      "run_as": "package",
+      "install_type": "",
+      "is_docker": false,
+      "service_port": "49374",
+      "releases": {
+        "2.2.5": {
+          "changelog": "首个版本：基于 OpenCode V2.2.5 linux-amd64 构建，提供 Web UI 与 CLI。",
+          "i18n": {
+            "en-US": {
+              "changelog": "Initial release: built from OpenCode V2.2.5 linux-amd64 with Web UI and CLI."
+            }
+          },
+          "updated_at": "2026-10-31T22:45:00+08:00",
+          "packages": {
+            "x86": {
+              "download_url": "https://github.com/CrRinko/FnDepot/releases/download/opencode-v2.2.5/opencode-2.2.5-fnos-amd64.fpk",
+              "sha256": "bb71ae09b18925293f795e1494185aff2ae193ce3b36bf939998bfe9309f7242",
+              "size": 121155364
+            }
+          }
+        }
+      }
+    }
+  }
+}
