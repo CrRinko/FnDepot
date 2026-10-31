@@ -1,0 +1,15 @@
+appname               = opencode
+version               = 2.2.5
+display_name          = OpenCode V2
+desc                  = Open source AI coding agent with web UI and CLI (upstream v2.2.5)
+platform              = x86
+source                = thirdparty
+maintainer            = CrRinko
+maintainer_url        = https://github.com/anomalyco/opencode
+distributor           = CrRinko
+distributor_url       = https://github.com/anomalyco/opencode
+desktop_uidir         = ui
+desktop_applaunchname = opencode.main
+ctl_stop              = true
+service_port          = 49374
+checkport             = true

@@ -1,0 +1,11 @@
+#!/bin/bash
+
+### This script is called after the user installs the application.
+
+set -eu
+
+if [ -f "${TRIM_PKGETC}/password" ]; then
+    chmod 600 "${TRIM_PKGETC}/password"
+fi
+
+exit 0

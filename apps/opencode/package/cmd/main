@@ -1,0 +1,192 @@
+#!/bin/bash
+# OpenCode V2 service lifecycle for fnOS.
+
+set -u
+
+PORT="${TRIM_SERVICE_PORT:-49374}"
+BIN="${TRIM_APPDEST}/bin/opencode"
+WRAPPER="${TRIM_APPDEST}/bin/opencode-server"
+LOG_FILE="${TRIM_PKGVAR}/opencode.log"
+PID_FILE="${TRIM_PKGVAR}/opencode.pid"
+PASSWORD_FILE="${TRIM_PKGETC}/password"
+WORKDIR="${TRIM_DATA_SHARE_PATHS%%:*}"
+if [ -z "${WORKDIR}" ]; then
+    WORKDIR="${TRIM_PKGHOME}/projects"
+fi
+
+log_msg() {
+    printf '%s - %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$1" >> "${LOG_FILE}"
+}
+
+check_process() {
+    local pid="$1"
+    case "${pid}" in
+        ''|*[!0-9]*) return 1 ;;
+    esac
+    [ -r "/proc/${pid}/cmdline" ] || return 1
+    local cmdline
+    cmdline=$(tr '\0' ' ' < "/proc/${pid}/cmdline" 2>/dev/null) || return 1
+    case "${cmdline}" in
+        *"${BIN}"*serve*) return 0 ;;
+    esac
+    return 1
+}
+
+status_process() {
+    if [ -r "${PID_FILE}" ]; then
+        local pid
+        pid=$(head -n 1 "${PID_FILE}" | tr -d '[:space:]')
+        if check_process "${pid}"; then
+            return 0
+        fi
+        rm -f "${PID_FILE}"
+    fi
+    return 1
+}
+
+ensure_password() {
+    if [ ! -s "${PASSWORD_FILE}" ]; then
+        umask 077
+        mkdir -p "$(dirname "${PASSWORD_FILE}")"
+        head -c 32 /dev/urandom | base64 | tr -d '\n' > "${PASSWORD_FILE}"
+    fi
+    chmod 600 "${PASSWORD_FILE}" 2>/dev/null || true
+}
+
+port_in_use() {
+    (exec 3<>"/dev/tcp/127.0.0.1/${PORT}") 2>/dev/null || return 1
+    exec 3>&- 3<&-
+    return 0
+}
+
+rotate_log() {
+    if [ -f "${LOG_FILE}" ] && [ "$(wc -c < "${LOG_FILE}" 2>/dev/null || printf '0')" -gt 5242880 ]; then
+        mv -f "${LOG_FILE}" "${LOG_FILE}.1"
+    fi
+}
+
+start_process() {
+    if status_process; then
+        log_msg "already running"
+        return 0
+    fi
+
+    ensure_password
+    mkdir -p "${TRIM_PKGVAR}" "${TRIM_PKGHOME}" "${WORKDIR}" || return 1
+
+    if [ ! -x "${WRAPPER}" ]; then
+        log_msg "missing executable: ${WRAPPER}"
+        return 1
+    fi
+
+    if port_in_use; then
+        log_msg "port ${PORT} is already in use"
+        return 1
+    fi
+
+    rotate_log
+    log_msg "starting OpenCode on port ${PORT} in ${WORKDIR}"
+
+    rm -f "${PID_FILE}"
+    HOME="${TRIM_PKGHOME}" \
+    OPENCODE_PASSWORD_FILE="${PASSWORD_FILE}" \
+    OPENCODE_WORKDIR="${WORKDIR}" \
+    OPENCODE_PORT="${PORT}" \
+    OPENCODE_PID_FILE="${PID_FILE}" \
+        nohup "${WRAPPER}" >> "${LOG_FILE}" 2>&1 &
+    local launcher=$!
+
+    local waited=0
+    while [ ! -s "${PID_FILE}" ] && [ "${waited}" -lt 50 ]; do
+        if ! kill -0 "${launcher}" 2>/dev/null; then
+            break
+        fi
+        sleep 0.1
+        waited=$((waited + 1))
+    done
+
+    if [ ! -s "${PID_FILE}" ]; then
+        log_msg "OpenCode failed to write its pid file"
+        return 1
+    fi
+
+    local pid
+    pid=$(head -n 1 "${PID_FILE}" | tr -d '[:space:]')
+
+    local count=0
+    while [ "${count}" -lt 10 ]; do
+        if ! check_process "${pid}"; then
+            log_msg "OpenCode exited during startup"
+            rm -f "${PID_FILE}"
+            return 1
+        fi
+        if port_in_use; then
+            log_msg "started pid=${pid}"
+            return 0
+        fi
+        sleep 1
+        count=$((count + 1))
+    done
+
+    log_msg "OpenCode is running but port ${PORT} did not open"
+    kill -TERM "${pid}" 2>/dev/null || true
+    rm -f "${PID_FILE}"
+    return 1
+}
+
+stop_process() {
+    if [ ! -r "${PID_FILE}" ]; then
+        log_msg "not running"
+        return 0
+    fi
+
+    local pid
+    pid=$(head -n 1 "${PID_FILE}" | tr -d '[:space:]')
+    if ! check_process "${pid}"; then
+        rm -f "${PID_FILE}"
+        log_msg "not running (stale pid file removed)"
+        return 0
+    fi
+
+    log_msg "stopping pid=${pid}"
+    kill -TERM "${pid}" 2>/dev/null || true
+
+    local count=0
+    while check_process "${pid}" && [ "${count}" -lt 15 ]; do
+        sleep 1
+        count=$((count + 1))
+    done
+
+    if check_process "${pid}"; then
+        log_msg "sending KILL to pid=${pid}"
+        kill -KILL "${pid}" 2>/dev/null || true
+        sleep 1
+    fi
+
+    rm -f "${PID_FILE}"
+    if check_process "${pid}"; then
+        log_msg "failed to stop pid=${pid}"
+        return 1
+    fi
+
+    log_msg "stopped"
+    return 0
+}
+
+case "${1:-}" in
+    start)
+        start_process
+        ;;
+    stop)
+        stop_process
+        ;;
+    status)
+        if status_process; then
+            exit 0
+        fi
+        exit 3
+        ;;
+    *)
+        exit 1
+        ;;
+esac

@@ -24,8 +24,8 @@ https://github.com/CrRinko/FnDepot
 
 - 安装包：[GitHub Release](https://github.com/CrRinko/FnDepot/releases/tag/opencode-v2.2.5)
 - 文件：`opencode-2.2.5-fnos-amd64.fpk`
-- 大小：121,155,364 字节
-- SHA-256：`bb71ae09b18925293f795e1494185aff2ae193ce3b36bf939998bfe9309f7242`
+- 大小：121,154,730 字节
+- SHA-256：`0739ec01432b43dd074da77b37a01296ca0bf84d3d78d25f9f14be7eb924a939`
 - 使用说明：[apps/opencode/README.md](apps/opencode/README.md)
 
 ## 仓库结构
@@ -35,18 +35,31 @@ FnDepot/
 ├── fnpack.json                 # FnDepot V2 源索引
 ├── README.md                   # 本文件
 ├── LICENSE
-├── apps/
-│   └── opencode/
-│       ├── README.md           # 应用详情
-│       └── icon-256.png        # 应用图标
-└── .gitignore
+├── .gitattributes
+├── .gitignore
+└── apps/
+    └── opencode/
+        ├── README.md           # 应用详情
+        ├── BUILD.md            # 构建说明
+        ├── icon-256.png        # 应用图标
+        ├── VERSION             # 当前版本
+        ├── SOURCE_COMMIT       # 上游 commit
+        ├── provenance.json     # 当前发布溯源
+        ├── package/            # fnOS FPK 包源码
+        │   ├── manifest
+        │   ├── cmd/
+        │   ├── config/
+        │   └── app/
+        └── scripts/
+            └── build.py        # 下载/校验/构建脚本
 ```
 
-FPK 文件体积较大，作为 GitHub Release 附件发布，不提交到 Git 仓库。
+FPK 文件体积较大，作为 GitHub Release 附件发布，不提交到 Git 仓库。后续新增应用时，按 `apps/<appname>/` 建独立目录。
 
 ## 说明
 
 - 本仓库是第三方打包与分发，不是 OpenCode 官方项目。
 - 当前仅提供 amd64（x86）安装包；没有 ARM64 包。
+- 升级请通过 FnDepot + fnOS 应用中心，不要使用应用内的 `/update` 或 `opencode upgrade`。
 - OpenCode 上游采用 MIT License；本仓库的元数据与说明同样采用 MIT License。
 - 安装前请确认设备架构与 fnOS 版本；生产环境请先备份数据。

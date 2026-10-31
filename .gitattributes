@@ -1,0 +1,16 @@
+* text=auto
+
+*.json text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.sh text eol=lf
+*.py text eol=lf
+
+# fnOS lifecycle scripts have no extension; keep LF for bash.
+cmd/* text eol=lf
+apps/opencode/package/cmd/* text eol=lf
+apps/opencode/package/app/bin/opencode-server text eol=lf
+
+*.png binary
+*.PNG binary
+*.fpk binary

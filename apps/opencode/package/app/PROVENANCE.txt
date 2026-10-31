@@ -1,0 +1,24 @@
+OpenCode __VERSION__ package provenance
+=======================================
+
+Upstream repository:
+  https://github.com/anomalyco/opencode
+
+Release tag:
+  v__VERSION__
+
+Source commit:
+  __SOURCE_COMMIT__
+
+Binary source:
+  npm package @opencode/cli-linux-x64@__VERSION__
+  https://registry.npmjs.org/@opencode/cli-linux-x64/-/cli-linux-x64-__VERSION__.tgz
+
+npm integrity:
+  __NPM_INTEGRITY__
+
+Runtime binary sha256:
+  __BINARY_SHA256__
+
+Build host:
+  Linux amd64, fnpack 1.2.3

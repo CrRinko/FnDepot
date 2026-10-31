@@ -12,8 +12,8 @@ OpenCode V2 的 fnOS amd64 安装包，基于上游 **v2.2.5** 的 linux-amd64 �
 | 上游 commit | `9bbb8ce18c80f099e0e448775f59d965ead40a21` |
 | 二进制来源 | `@opencode/cli-linux-x64@2.2.5` |
 | 二进制 SHA-256 | `8d060e1d2fbb9bb44cf09ae6ed1f3f6a7cff070b5227e2f90970132b23a92050` |
-| FPK SHA-256 | `bb71ae09b18925293f795e1494185aff2ae193ce3b36bf939998bfe9309f7242` |
-| FPK 大小 | 121,155,364 字节 |
+| FPK SHA-256 | `0739ec01432b43dd074da77b37a01296ca0bf84d3d78d25f9f14be7eb924a939` |
+| FPK 大小 | 121,154,730 字节 |
 
 ## 安装
 
@@ -29,7 +29,7 @@ https://github.com/CrRinko/FnDepot/releases/download/opencode-v2.2.5/opencode-2.
 
 ```bash
 sha256sum opencode-2.2.5-fnos-amd64.fpk
-# bb71ae09b18925293f795e1494185aff2ae193ce3b36bf939998bfe9309f7242
+# 0739ec01432b43dd074da77b37a01296ca0bf84d3d78d25f9f14be7eb924a939
 ```
 
 ## 使用
@@ -79,6 +79,18 @@ OPENCODE_PASSWORD="$(cat /var/apps/opencode/etc/password)" \
 - Web UI 根页面本身不要求认证，但所有 `/api/*` 请求都需要密码。
 - 不要把 `49374` 端口直接暴露到公网；远程访问请使用 VPN 或 fnOS 反向代理。
 - 应用以专用用户 `opencode` 运行，不使用 root。
+
+## 升级
+
+请通过 **FnDepot + fnOS 应用中心**升级：
+
+1. 本仓库发布新版本 FPK；
+2. 在 fnOS 应用中心安装新版本；
+3. 应用中心会处理停止、卸载重装和数据保留。
+
+不要在应用内使用 TUI 的 `/update` 或 `opencode upgrade`。本包已设置
+`OPENCODE_DISABLE_AUTOUPDATE=1`，不会主动检查自更新；手动执行时也会因为
+无法识别安装方式而安全失败。
 
 ## 说明
 

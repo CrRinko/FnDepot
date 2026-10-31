@@ -1,0 +1,16 @@
+#!/bin/bash
+
+### This script is called before the user installs the application.
+
+set -eu
+umask 077
+
+mkdir -p "${TRIM_PKGETC}" "${TRIM_PKGVAR}" "${TRIM_PKGHOME}"
+
+PASSWORD_FILE="${TRIM_PKGETC}/password"
+if [ ! -s "${PASSWORD_FILE}" ]; then
+    head -c 32 /dev/urandom | base64 | tr -d '\n' > "${PASSWORD_FILE}"
+fi
+chmod 600 "${PASSWORD_FILE}"
+
+exit 0

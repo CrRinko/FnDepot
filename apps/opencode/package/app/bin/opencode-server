@@ -1,0 +1,23 @@
+#!/bin/sh
+# Launch the OpenCode web server with a persistent password and workspace.
+
+set -eu
+
+: "${HOME:?HOME is required}"
+: "${OPENCODE_PASSWORD_FILE:?OPENCODE_PASSWORD_FILE is required}"
+: "${OPENCODE_WORKDIR:?OPENCODE_WORKDIR is required}"
+: "${OPENCODE_PORT:?OPENCODE_PORT is required}"
+: "${OPENCODE_PID_FILE:?OPENCODE_PID_FILE is required}"
+
+printf '%s' "$$" > "${OPENCODE_PID_FILE}"
+
+OPENCODE_PASSWORD="$(cat "${OPENCODE_PASSWORD_FILE}")"
+export OPENCODE_PASSWORD
+
+# This app is managed by fnOS/FnDepot. Keep background update checks out of
+# the packaged runtime; upgrades are delivered as new FPK releases.
+OPENCODE_DISABLE_AUTOUPDATE=1
+export OPENCODE_DISABLE_AUTOUPDATE
+
+cd "${OPENCODE_WORKDIR}"
+exec "$(dirname "$0")/opencode" serve --hostname 0.0.0.0 --port "${OPENCODE_PORT}"

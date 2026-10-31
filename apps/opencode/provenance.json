@@ -1,0 +1,25 @@
+{
+  "appname": "opencode",
+  "version": "2.2.5",
+  "upstream": {
+    "repo": "https://github.com/anomalyco/opencode",
+    "tag": "v2.2.5",
+    "commit": "9bbb8ce18c80f099e0e448775f59d965ead40a21"
+  },
+  "binary": {
+    "npm_package": "@opencode/cli-linux-x64",
+    "npm_integrity": "sha512-BkHAfTqNsg/qphyHNrnH+DGkOxZsGjamNpM5DvwoEvz7ZAPNw8mEbMXGTCDOAH+/+40Eqeie6KNZBZZQwPCjaA==",
+    "sha256": "8d060e1d2fbb9bb44cf09ae6ed1f3f6a7cff070b5227e2f90970132b23a92050"
+  },
+  "fpk": {
+    "name": "opencode-2.2.5-fnos-amd64.fpk",
+    "sha256": "0739ec01432b43dd074da77b37a01296ca0bf84d3d78d25f9f14be7eb924a939",
+    "size": 121154730,
+    "release_url": "https://github.com/CrRinko/FnDepot/releases/tag/opencode-v2.2.5"
+  },
+  "toolchain": {
+    "fnpack": "1.2.3",
+    "fnpack_sha256": "54b97fa7b70968c4d05c79840f5daeff508957d0bb2062fdb0376d00d9615c93",
+    "build_host": "Linux amd64 (WSL Ubuntu 24.04)"
+  }
+}
