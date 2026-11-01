@@ -45,6 +45,22 @@ python3 scripts/build.py --version 2.2.6
 
 同时更新 `VERSION` 和 `SOURCE_COMMIT`，便于下一次默认构建。
 
+## 打包修订（不改上游版本）
+
+当只修复 fnOS 打包脚本、但上游版本不变时，使用新的资产名，避免覆盖已经发布的文件：
+
+```bash
+python3 scripts/build.py --version 2.2.5 --artifact-suffix r2
+```
+
+输出：
+
+```text
+dist/opencode-2.2.5-fnos-amd64-r2.fpk
+```
+
+然后在 GitHub Release 中新增该附件，并更新 `fnpack.json` 的 `download_url`、`sha256`、`size`，版本键保持 `2.2.5`。
+
 ## 离线/复用已下载文件
 
 ```bash

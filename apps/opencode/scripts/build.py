@@ -292,7 +292,7 @@ def parse_manifest(text: str) -> dict[str, str]:
     return fields
 
 
-def run_fnpack(fnpack: Path, stage: Path, output: Path, version: str) -> Path:
+def run_fnpack(fnpack: Path, stage: Path, output: Path, version: str, suffix: str = "") -> Path:
     result = subprocess.run(
         [str(fnpack), "build", "--directory", str(stage)],
         cwd=stage,
@@ -309,7 +309,10 @@ def run_fnpack(fnpack: Path, stage: Path, output: Path, version: str) -> Path:
     if len(candidates) != 1:
         raise BuildError(f"fnpack must produce exactly one FPK, found {len(candidates)}")
     output.mkdir(parents=True, exist_ok=True)
-    artifact = output / f"opencode-{version}-fnos-amd64.fpk"
+    artifact_name = f"opencode-{version}-fnos-amd64"
+    if suffix:
+        artifact_name += f"-{suffix}"
+    artifact = output / f"{artifact_name}.fpk"
     shutil.move(str(candidates[0]), artifact)
     digest = sha256_file(artifact)
     sidecar = artifact.with_name(artifact.name + ".sha256")
@@ -421,6 +424,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--fnpack", help="explicit fnpack binary")
     parser.add_argument("--allow-unverified-fnpack", action="store_true", help="accept an explicitly trusted fnpack")
     parser.add_argument("--out", default=str(APP_DIR / "dist"), help="output directory")
+    parser.add_argument("--artifact-suffix", default="", help="artifact name suffix, for example r2")
     parser.add_argument("--source-commit", default=default_commit, help="upstream commit for provenance")
     parser.add_argument("--keep-staging", action="store_true", help="keep the temporary staging directory")
     parser.add_argument("--json", action="store_true", help="print a JSON summary")
@@ -432,6 +436,9 @@ def main() -> int:
     version = args.version.strip()
     if not re.fullmatch(r"[0-9A-Za-z][0-9A-Za-z.+_-]*", version):
         raise BuildError(f"invalid version: {version!r}")
+    suffix = args.artifact_suffix.strip()
+    if suffix and not re.fullmatch(r"[0-9A-Za-z][0-9A-Za-z._-]*", suffix):
+        raise BuildError(f"invalid artifact suffix: {suffix!r}")
 
     temporary_root = None
     try:
@@ -453,12 +460,13 @@ def main() -> int:
             binary_sha256,
             args.source_commit or f"see upstream tag v{version}",
         )
-        artifact = run_fnpack(fnpack, stage, Path(args.out), version)
+        artifact = run_fnpack(fnpack, stage, Path(args.out), version, suffix)
         verification = verify_fpk(artifact, version, binary_sha256)
         summary = {
             "ok": True,
             "version": version,
             "architecture": "amd64",
+            "artifact_suffix": suffix,
             "artifact": {
                 "path": str(artifact),
                 "name": artifact.name,

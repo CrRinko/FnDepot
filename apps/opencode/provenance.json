@@ -12,10 +12,12 @@
     "sha256": "8d060e1d2fbb9bb44cf09ae6ed1f3f6a7cff070b5227e2f90970132b23a92050"
   },
   "fpk": {
-    "name": "opencode-2.2.5-fnos-amd64.fpk",
-    "sha256": "0739ec01432b43dd074da77b37a01296ca0bf84d3d78d25f9f14be7eb924a939",
-    "size": 121154730,
-    "release_url": "https://github.com/CrRinko/FnDepot/releases/tag/opencode-v2.2.5"
+    "revision": "r2",
+    "name": "opencode-2.2.5-fnos-amd64-r2.fpk",
+    "sha256": "7a348547346b6cd78237ef7b187c7ec25083c660986624044dc11d997f8dd824",
+    "size": 121154901,
+    "release_url": "https://github.com/CrRinko/FnDepot/releases/tag/opencode-v2.2.5",
+    "download_url": "https://github.com/CrRinko/FnDepot/releases/download/opencode-v2.2.5/opencode-2.2.5-fnos-amd64-r2.fpk"
   },
   "toolchain": {
     "fnpack": "1.2.3",
