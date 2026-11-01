@@ -56,6 +56,7 @@ ensure_dashboard_config() {
     HOME="${DATA_DIR}" HERMES_HOME="${DATA_DIR}" \
     "${VENV}/bin/python" - <<'PY'
 import os
+import re
 import secrets
 
 from hermes_cli.config import load_config, save_config
@@ -71,11 +72,19 @@ if not str(basic.get("secret", "") or "").strip():
     basic["secret"] = secrets.token_urlsafe(32)
 ensure_basic_auth_plugin_enabled_in_config(cfg)
 
+config_path = os.path.join(os.environ["HERMES_HOME"], "config.yaml")
+raw_has_cwd = False
+try:
+    with open(config_path, encoding="utf-8") as stream:
+        raw_has_cwd = bool(re.search(r"(?m)^\s*cwd\s*:", stream.read()))
+except OSError:
+    pass
+
 terminal = cfg.setdefault("terminal", {})
-if not str(terminal.get("cwd", "") or "").strip():
+if not raw_has_cwd:
     terminal["cwd"] = os.environ["HERMES_WORKDIR"]
 
-save_config(cfg)
+save_config(cfg, preserve_keys={("terminal", "cwd")})
 PY
 }
 
