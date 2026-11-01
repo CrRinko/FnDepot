@@ -1,0 +1,432 @@
+#!/bin/bash
+# Hermes Agent runtime installer for fnOS.
+#
+# This script is called by install_callback/upgrade_callback and by cmd/main
+# when the runtime is missing. It downloads the pinned upstream source and
+# runtimes, verifies every SHA-256, creates the Python 3.14 virtualenv, and
+# records a .ready stamp. It never writes into ${TRIM_PKGHOME}/data.
+
+set -Eeuo pipefail
+
+VERSION="0.22.5"
+COMMIT="bf0203a794a07aac3ff764972ab9087baa4e4f4e"
+
+PYTHON_VERSION="3.14.9"
+PYTHON_URL="https://github.com/astral-sh/python-build-standalone/releases/download/20261021/cpython-3.14.9+20261021-x86_64-unknown-linux-gnu-install_only.tar.gz"
+PYTHON_SHA256="dfa4c5a40c47f338f41658017be550c72247c391e6bfb1fa4da03ebc8451abdf"
+
+UV_VERSION="0.13.5"
+UV_URL="https://github.com/astral-sh/uv/releases/download/0.13.5/uv-x86_64-unknown-linux-gnu.tar.gz"
+UV_SHA256="f68d291c75783122dad58ab77def0e13f3233f358731db5d6d7e8715603b928f"
+
+NODE_VERSION="26.12.1"
+NODE_URL="https://nodejs.org/dist/v26.12.1/node-v26.12.1-linux-x64.tar.xz"
+NODE_SHA256="6170b2d474e1c626f43cff3adc118df9fe3b573258a4fc3d850c8dbc6b079bbd"
+
+RG_VERSION="15.2.0"
+RG_URL="https://github.com/BurntSushi/ripgrep/releases/download/15.2.0/ripgrep-15.2.0-x86_64-unknown-linux-musl.tar.gz"
+RG_SHA256="33e15bcf1624b25cdd2a55813a47a2f95dbe126268203e76aa6a585d1e7b149c"
+
+SOURCE_URL="https://github.com/NousResearch/hermes-agent/archive/refs/tags/v0.22.5.tar.gz"
+SOURCE_SHA256="a8f67e5ec14fea681acef6cc7ff1553f002bb6101fd2df22bfdd4b7eecc54eb2"
+
+TRIM_APPDEST="${TRIM_APPDEST:-}"
+TRIM_PKGHOME="${TRIM_PKGHOME:-}"
+TRIM_PKGVAR="${TRIM_PKGVAR:-}"
+TRIM_USERNAME="${TRIM_USERNAME:-}"
+
+DATA_DIR=""
+RUNTIME=""
+SRC=""
+VENV=""
+READY_FILE=""
+LOG_FILE=""
+
+log() {
+    local msg
+    msg="$(date '+%Y-%m-%d %H:%M:%S') - $*"
+    printf '%s\n' "$msg" >&2
+    if [ -n "${LOG_FILE}" ]; then
+        printf '%s\n' "$msg" >> "${LOG_FILE}" 2>/dev/null || true
+    fi
+}
+
+toast() {
+    if [ -n "${TRIM_TEMP_LOGFILE:-}" ]; then
+        printf '%s\n' "$*" > "${TRIM_TEMP_LOGFILE}" 2>/dev/null || true
+    fi
+}
+
+fail() {
+    log "ERROR: $*"
+    toast "$*"
+    exit 1
+}
+
+on_error() {
+    local line="$1"
+    log "ERROR at line ${line}"
+    toast "Hermes Agent 运行时安装失败，详见 ${TRIM_PKGVAR:-/var/apps/hermes-agent/var}/install.log"
+    if [ -n "${LOG_FILE}" ] && [ -r "${LOG_FILE}" ]; then
+        tail -n 20 "${LOG_FILE}" >&2 || true
+    fi
+    exit 1
+}
+trap 'on_error $LINENO' ERR
+
+sha256_file() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$1" | awk '{print $1}'
+    else
+        shasum -a 256 "$1" | awk '{print $1}'
+    fi
+}
+
+github_mirrors() {
+    local url="$1"
+    if [ -n "${HERMES_DOWNLOAD_MIRROR:-}" ]; then
+        printf '%s\n' "${HERMES_DOWNLOAD_MIRROR%/}/${url}"
+    fi
+    printf '%s\n' "$url"
+    printf '%s\n' "https://ghproxy.com/${url}"
+    printf '%s\n' "https://gh-proxy.com/${url}"
+    printf '%s\n' "https://mirror.ghproxy.com/${url}"
+}
+
+node_mirrors() {
+    local url="$1"
+    if [ -n "${HERMES_DOWNLOAD_MIRROR:-}" ]; then
+        printf '%s\n' "${HERMES_DOWNLOAD_MIRROR%/}/${url}"
+    fi
+    printf '%s\n' "$url"
+    printf '%s\n' "${url/https:\/\/nodejs.org\/dist/https://npmmirror.com/mirrors/node}"
+}
+
+download_first() {
+    local destination="$1" expected="$2"
+    shift 2
+    local url actual
+    for url in "$@"; do
+        [ -n "${url}" ] || continue
+        log "downloading ${url}"
+        rm -f "${destination}.part"
+        if curl -fsSL --retry 3 --connect-timeout 15 --max-time 900 \
+            -o "${destination}.part" "${url}"; then
+            actual="$(sha256_file "${destination}.part")"
+            if [ "${actual}" = "${expected}" ]; then
+                mv -f "${destination}.part" "${destination}"
+                return 0
+            fi
+            log "checksum mismatch for ${url}: got ${actual}"
+        else
+            log "download failed: ${url}"
+        fi
+        rm -f "${destination}.part"
+    done
+    return 1
+}
+
+read_version_env() {
+    local key="$1" file="${TRIM_APPDEST}/config/bootstrap/version.env"
+    if [ -r "${file}" ]; then
+        awk -F= -v key="${key}" '$1 == key { sub(/^[^=]*=/, ""); print; exit }' "${file}"
+    fi
+}
+
+read_ready() {
+    READY_VERSION=""
+    READY_COMMIT=""
+    READY_WEB_DIST_SHA256=""
+    READY_PACKAGING_REVISION=""
+    if [ -r "${READY_FILE}" ]; then
+        while IFS='=' read -r key value; do
+            case "${key}" in
+                version) READY_VERSION="${value}" ;;
+                commit) READY_COMMIT="${value}" ;;
+                web_dist_sha256) READY_WEB_DIST_SHA256="${value}" ;;
+                packaging_revision) READY_PACKAGING_REVISION="${value}" ;;
+            esac
+        done < "${READY_FILE}"
+    fi
+}
+
+ready_matches() {
+    [ "${READY_VERSION}" = "${VERSION}" ] &&
+        [ "${READY_COMMIT}" = "${COMMIT}" ] &&
+        [ -x "${VENV}/bin/hermes" ]
+}
+
+web_dist_hash() {
+    local dir="${SRC}/hermes_cli/web_dist"
+    if [ ! -d "${dir}" ]; then
+        printf ''
+        return 0
+    fi
+    (
+        cd "${dir}" || exit 1
+        find . -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | awk '{print $1}'
+    )
+}
+
+install_stamp() {
+    [ -f "${TRIM_APPDEST}/install-stamp.json" ] ||
+        fail "missing ${TRIM_APPDEST}/install-stamp.json"
+    cp -f "${TRIM_APPDEST}/install-stamp.json" "${SRC}/install-stamp.json"
+}
+
+copy_web_dist() {
+    [ -f "${TRIM_APPDEST}/web_dist/index.html" ] ||
+        fail "missing ${TRIM_APPDEST}/web_dist/index.html"
+    mkdir -p "${SRC}/hermes_cli"
+    rm -rf "${SRC}/hermes_cli/web_dist"
+    cp -a "${TRIM_APPDEST}/web_dist" "${SRC}/hermes_cli/web_dist"
+}
+
+cache_path() {
+    printf '%s' "${RUNTIME}/.cache/$1"
+}
+
+install_source() {
+    local tarball tmp
+    tarball="$(cache_path "hermes-agent-${VERSION}.tar.gz")"
+    tmp="${RUNTIME}/.source.tmp"
+    mkdir -p "${RUNTIME}/.cache"
+    rm -rf "${tmp}"
+    mkdir -p "${tmp}"
+    if [ ! -f "${tarball}" ] || [ "$(sha256_file "${tarball}")" != "${SOURCE_SHA256}" ]; then
+        local -a urls
+        mapfile -t urls < <(github_mirrors "${SOURCE_URL}")
+        download_first "${tarball}" "${SOURCE_SHA256}" "${urls[@]}" ||
+            fail "failed to download Hermes source"
+    fi
+    tar -xzf "${tarball}" -C "${tmp}" --strip-components=1 ||
+        fail "failed to extract Hermes source"
+    rm -rf "${SRC}"
+    mv "${tmp}" "${SRC}"
+}
+
+ensure_python() {
+    local py="${RUNTIME}/python/bin/python3" tarball tmp
+    if [ -x "${py}" ] && "${py}" --version 2>&1 | grep -q "${PYTHON_VERSION}"; then
+        return 0
+    fi
+    tarball="$(cache_path "python-${PYTHON_VERSION}.tar.gz")"
+    tmp="${RUNTIME}/.python.tmp"
+    mkdir -p "${RUNTIME}/.cache"
+    rm -rf "${tmp}"
+    mkdir -p "${tmp}"
+    if [ ! -f "${tarball}" ] || [ "$(sha256_file "${tarball}")" != "${PYTHON_SHA256}" ]; then
+        local -a urls
+        mapfile -t urls < <(github_mirrors "${PYTHON_URL}")
+        download_first "${tarball}" "${PYTHON_SHA256}" "${urls[@]}" ||
+            fail "failed to download Python ${PYTHON_VERSION}"
+    fi
+    tar -xzf "${tarball}" -C "${tmp}" --strip-components=1 ||
+        fail "failed to extract Python ${PYTHON_VERSION}"
+    [ -x "${tmp}/bin/python3" ] || fail "Python archive has no bin/python3"
+    rm -rf "${RUNTIME}/python"
+    mv "${tmp}" "${RUNTIME}/python"
+}
+
+ensure_uv() {
+    local uv="${RUNTIME}/bin/uv" tarball tmp
+    if [ -x "${uv}" ] && "${uv}" --version 2>&1 | grep -q "${UV_VERSION}"; then
+        return 0
+    fi
+    tarball="$(cache_path "uv-${UV_VERSION}.tar.gz")"
+    tmp="${RUNTIME}/.uv.tmp"
+    mkdir -p "${RUNTIME}/.cache" "${RUNTIME}/bin"
+    rm -rf "${tmp}"
+    mkdir -p "${tmp}"
+    if [ ! -f "${tarball}" ] || [ "$(sha256_file "${tarball}")" != "${UV_SHA256}" ]; then
+        local -a urls
+        mapfile -t urls < <(github_mirrors "${UV_URL}")
+        download_first "${tarball}" "${UV_SHA256}" "${urls[@]}" ||
+            fail "failed to download uv ${UV_VERSION}"
+    fi
+    tar -xzf "${tarball}" -C "${tmp}" --strip-components=1 ||
+        fail "failed to extract uv ${UV_VERSION}"
+    [ -x "${tmp}/uv" ] || fail "uv archive has no uv binary"
+    mv -f "${tmp}/uv" "${uv}"
+    chmod 755 "${uv}"
+}
+
+ensure_node() {
+    local node="${RUNTIME}/node/bin/node" tarball tmp
+    if [ -x "${node}" ] && "${node}" --version 2>&1 | grep -q "v${NODE_VERSION}"; then
+        return 0
+    fi
+    tarball="$(cache_path "node-${NODE_VERSION}.tar.xz")"
+    tmp="${RUNTIME}/.node.tmp"
+    mkdir -p "${RUNTIME}/.cache"
+    rm -rf "${tmp}"
+    mkdir -p "${tmp}"
+    if [ ! -f "${tarball}" ] || [ "$(sha256_file "${tarball}")" != "${NODE_SHA256}" ]; then
+        local -a urls
+        mapfile -t urls < <(node_mirrors "${NODE_URL}")
+        download_first "${tarball}" "${NODE_SHA256}" "${urls[@]}" ||
+            fail "failed to download Node ${NODE_VERSION}"
+    fi
+    tar -xJf "${tarball}" -C "${tmp}" --strip-components=1 ||
+        fail "failed to extract Node ${NODE_VERSION}"
+    [ -x "${tmp}/bin/node" ] || fail "Node archive has no bin/node"
+    rm -rf "${RUNTIME}/node"
+    mv "${tmp}" "${RUNTIME}/node"
+}
+
+ensure_ripgrep() {
+    local rg="${RUNTIME}/bin/rg" tarball tmp
+    if [ -x "${rg}" ] && "${rg}" --version 2>&1 | grep -q "${RG_VERSION}"; then
+        return 0
+    fi
+    tarball="$(cache_path "ripgrep-${RG_VERSION}.tar.gz")"
+    tmp="${RUNTIME}/.rg.tmp"
+    mkdir -p "${RUNTIME}/.cache" "${RUNTIME}/bin"
+    rm -rf "${tmp}"
+    mkdir -p "${tmp}"
+    if [ ! -f "${tarball}" ] || [ "$(sha256_file "${tarball}")" != "${RG_SHA256}" ]; then
+        local -a urls
+        mapfile -t urls < <(github_mirrors "${RG_URL}")
+        download_first "${tarball}" "${RG_SHA256}" "${urls[@]}" ||
+            fail "failed to download ripgrep ${RG_VERSION}"
+    fi
+    tar -xzf "${tarball}" -C "${tmp}" --strip-components=1 ||
+        fail "failed to extract ripgrep ${RG_VERSION}"
+    [ -x "${tmp}/rg" ] || fail "ripgrep archive has no rg binary"
+    mv -f "${tmp}/rg" "${rg}"
+    chmod 755 "${rg}"
+}
+
+sync_venv() {
+    local uv="${RUNTIME}/bin/uv" py="${RUNTIME}/python/bin/python3"
+    if [ -x "${VENV}/bin/hermes" ] &&
+        "${VENV}/bin/hermes" --version 2>/dev/null | grep -q "${VERSION}"; then
+        return 0
+    fi
+    [ -x "${uv}" ] || fail "uv is not installed"
+    [ -x "${py}" ] || fail "Python is not installed"
+    rm -rf "${VENV}"
+    "${uv}" venv --python "${py}" "${VENV}" || fail "uv venv failed"
+    (
+        cd "${SRC}" || exit 1
+        UV_PROJECT_ENVIRONMENT="${VENV}" \
+        UV_PYTHON="${py}" \
+        UV_CACHE_DIR="${RUNTIME}/.uv-cache" \
+        UV_CONCURRENT_DOWNLOADS=16 \
+        UV_CONCURRENT_INSTALLS=8 \
+            "${uv}" sync --extra "${HERMES_SETUP_EXTRAS:-all}" --locked
+    ) || fail "uv sync failed"
+    [ -x "${VENV}/bin/hermes" ] || fail "hermes entry point missing after uv sync"
+}
+
+write_ready() {
+    local web_hash packaging_revision
+    web_hash="$(web_dist_hash)"
+    packaging_revision="$(read_version_env PACKAGING_REVISION || true)"
+    packaging_revision="${packaging_revision:-r0}"
+    printf 'version=%s\ncommit=%s\nweb_dist_sha256=%s\npackaging_revision=%s\ninstalled_at=%s\n' \
+        "${VERSION}" "${COMMIT}" "${web_hash}" "${packaging_revision}" \
+        "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" > "${READY_FILE}"
+}
+
+fix_permissions() {
+    if [ "$(id -u)" -eq 0 ]; then
+        if [ -n "${TRIM_USERNAME}" ]; then
+            chown -R "${TRIM_USERNAME}:${TRIM_USERNAME}" "${TRIM_PKGHOME}" "${TRIM_PKGVAR}" ||
+                log "warning: chown failed for ${TRIM_USERNAME}"
+        fi
+        log "chown=root"
+    else
+        if [ -n "${TRIM_USERNAME}" ] && [ "${TRIM_USERNAME}" != "$(id -un)" ]; then
+            fail "running as $(id -un), expected ${TRIM_USERNAME}"
+        fi
+        log "chown=skip"
+    fi
+}
+
+print_check() {
+    local packaging_revision
+    packaging_revision="$(read_version_env PACKAGING_REVISION || true)"
+    packaging_revision="${packaging_revision:-r0}"
+    printf 'version=%s\n' "${VERSION}"
+    printf 'commit=%s\n' "${COMMIT}"
+    printf 'python=%s\n' "${PYTHON_VERSION}"
+    printf 'uv=%s\n' "${UV_VERSION}"
+    printf 'node=%s\n' "${NODE_VERSION}"
+    printf 'ripgrep=%s\n' "${RG_VERSION}"
+    printf 'packaging_revision=%s\n' "${packaging_revision}"
+    if [ "$(id -u)" -eq 0 ]; then
+        printf 'chown=root\n'
+    else
+        printf 'chown=skip\n'
+    fi
+}
+
+main() {
+    local check_only=0 force=0
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            --check) check_only=1 ;;
+            --force) force=1 ;;
+            --version)
+                shift
+                [ "$#" -gt 0 ] || fail "--version requires a value"
+                VERSION="$1"
+                ;;
+            --commit)
+                shift
+                [ "$#" -gt 0 ] || fail "--commit requires a value"
+                COMMIT="$1"
+                ;;
+            *)
+                fail "unknown argument: $1"
+                ;;
+        esac
+        shift
+    done
+
+    [ -n "${TRIM_PKGHOME}" ] || fail "TRIM_PKGHOME is required"
+    [ -n "${TRIM_APPDEST}" ] || fail "TRIM_APPDEST is required"
+    [ -n "${TRIM_PKGVAR}" ] || fail "TRIM_PKGVAR is required"
+
+    DATA_DIR="${TRIM_PKGHOME}/data"
+    RUNTIME="${TRIM_PKGHOME}/runtime"
+    SRC="${RUNTIME}/hermes-agent-${VERSION}"
+    VENV="${RUNTIME}/venv"
+    READY_FILE="${RUNTIME}/.ready"
+    LOG_FILE="${TRIM_PKGVAR}/install.log"
+
+    if [ "${check_only}" -eq 1 ]; then
+        print_check
+        exit 0
+    fi
+
+    mkdir -p "${DATA_DIR}" "${RUNTIME}" "${RUNTIME}/bin" "${RUNTIME}/.cache" "${TRIM_PKGVAR}"
+    read_ready
+    local need_full=0
+    if [ "${force}" -eq 1 ] || ! ready_matches; then
+        need_full=1
+    fi
+    if [ ! -d "${SRC}" ]; then
+        need_full=1
+    fi
+    if [ "${need_full}" -eq 1 ]; then
+        install_source
+        ensure_python
+        ensure_uv
+        ensure_node
+        ensure_ripgrep
+    fi
+    install_stamp
+    copy_web_dist
+    if [ "${need_full}" -eq 1 ] || [ ! -x "${VENV}/bin/hermes" ]; then
+        sync_venv
+    fi
+    write_ready
+    fix_permissions
+    log "runtime ready: ${RUNTIME}"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    main "$@"
+fi
