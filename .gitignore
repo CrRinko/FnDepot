@@ -13,3 +13,7 @@ apps/hermes-agent/dist/
 apps/hermes-agent/package/app/web_dist/
 apps/hermes-agent/node_modules/
 apps/hermes-agent/**/node_modules/
+
+# Python bytecode
+__pycache__/
+*.pyc
