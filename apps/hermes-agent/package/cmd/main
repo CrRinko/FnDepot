@@ -1,0 +1,209 @@
+#!/bin/bash
+# Hermes Agent dashboard lifecycle for fnOS.
+
+set -u
+
+PORT="${TRIM_SERVICE_PORT:-49375}"
+DATA_DIR="${TRIM_PKGHOME}/data"
+RUNTIME="${TRIM_PKGHOME}/runtime"
+VENV="${RUNTIME}/venv"
+HERMES="${VENV}/bin/hermes"
+LOG_FILE="${TRIM_PKGVAR}/dashboard.log"
+PID_FILE="${TRIM_PKGVAR}/dashboard.pid"
+PASSWORD_FILE="${TRIM_PKGETC}/password"
+SETUP="${TRIM_APPDEST}/bin/hermes-setup"
+WORKDIR="${TRIM_DATA_SHARE_PATHS:-}"
+WORKDIR="${WORKDIR%%:*}"
+[ -n "${WORKDIR}" ] || WORKDIR="${DATA_DIR}/workspace"
+
+log_msg() {
+    printf '%s - %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$1" >> "${LOG_FILE}" 2>/dev/null || true
+}
+
+ensure_runtime() {
+    if [ -r "${RUNTIME}/.ready" ] && [ -x "${HERMES}" ]; then
+        return 0
+    fi
+    if [ ! -x "${SETUP}" ]; then
+        log_msg "missing runtime installer: ${SETUP}"
+        return 1
+    fi
+    log_msg "runtime missing; running ${SETUP}"
+    if ! "${SETUP}" >> "${LOG_FILE}" 2>&1; then
+        log_msg "runtime setup failed"
+        return 1
+    fi
+    if [ ! -x "${HERMES}" ]; then
+        log_msg "runtime setup finished but ${HERMES} is missing"
+        return 1
+    fi
+    return 0
+}
+
+ensure_password() {
+    if [ ! -s "${PASSWORD_FILE}" ]; then
+        umask 077
+        mkdir -p "$(dirname "${PASSWORD_FILE}")" || return 1
+        head -c 32 /dev/urandom | base64 | tr -d '\n' > "${PASSWORD_FILE}" || return 1
+    fi
+    chmod 600 "${PASSWORD_FILE}" 2>/dev/null || true
+    return 0
+}
+
+ensure_dashboard_config() {
+    HERMES_PASSWORD="$(cat "${PASSWORD_FILE}")" \
+    HERMES_WORKDIR="${WORKDIR}" \
+    HOME="${DATA_DIR}" HERMES_HOME="${DATA_DIR}" \
+    "${VENV}/bin/python" - <<'PY'
+import os
+import secrets
+
+from hermes_cli.config import load_config, save_config
+from hermes_cli.plugins_cmd import ensure_basic_auth_plugin_enabled_in_config
+from plugins.dashboard_auth.basic import hash_password
+
+cfg = load_config()
+basic = cfg.setdefault("dashboard", {}).setdefault("basic_auth", {})
+basic["username"] = "hermes"
+basic["password_hash"] = hash_password(os.environ["HERMES_PASSWORD"])
+basic["password"] = ""
+if not str(basic.get("secret", "") or "").strip():
+    basic["secret"] = secrets.token_urlsafe(32)
+ensure_basic_auth_plugin_enabled_in_config(cfg)
+
+terminal = cfg.setdefault("terminal", {})
+if not str(terminal.get("cwd", "") or "").strip():
+    terminal["cwd"] = os.environ["HERMES_WORKDIR"]
+
+save_config(cfg)
+PY
+}
+
+port_in_use() {
+    (exec 3<>"/dev/tcp/127.0.0.1/${PORT}") 2>/dev/null
+}
+
+status_process() {
+    local pid
+    if [ -r "${PID_FILE}" ]; then
+        pid="$(head -n 1 "${PID_FILE}" | tr -d '[:space:]')"
+        case "${pid}" in
+            ''|*[!0-9]*)
+                rm -f "${PID_FILE}"
+                return 1
+                ;;
+        esac
+        if kill -0 "${pid}" 2>/dev/null && port_in_use; then
+            return 0
+        fi
+        rm -f "${PID_FILE}"
+    fi
+    return 1
+}
+
+start_process() {
+    local pid i
+    if status_process; then
+        log_msg "already running"
+        return 0
+    fi
+
+    mkdir -p "${DATA_DIR}" "${TRIM_PKGVAR}" "${WORKDIR}" || return 1
+    ensure_runtime || return 1
+    ensure_password || return 1
+    if ! ensure_dashboard_config; then
+        log_msg "dashboard auth configuration failed"
+        return 1
+    fi
+    if port_in_use; then
+        log_msg "port ${PORT} is already in use"
+        return 1
+    fi
+
+    rm -f "${PID_FILE}"
+    if command -v setsid >/dev/null 2>&1; then
+        setsid env HOME="${DATA_DIR}" HERMES_HOME="${DATA_DIR}" \
+            PATH="${VENV}/bin:${RUNTIME}/node/bin:${RUNTIME}/bin:/usr/local/bin:/usr/bin:/bin" \
+            nohup "${HERMES}" dashboard --host 0.0.0.0 --port "${PORT}" --no-open --skip-build \
+            >> "${LOG_FILE}" 2>&1 &
+    else
+        env HOME="${DATA_DIR}" HERMES_HOME="${DATA_DIR}" \
+            PATH="${VENV}/bin:${RUNTIME}/node/bin:${RUNTIME}/bin:/usr/local/bin:/usr/bin:/bin" \
+            nohup "${HERMES}" dashboard --host 0.0.0.0 --port "${PORT}" --no-open --skip-build \
+            >> "${LOG_FILE}" 2>&1 &
+    fi
+    pid=$!
+    printf '%s\n' "${pid}" > "${PID_FILE}"
+
+    for i in $(seq 1 60); do
+        if ! kill -0 "${pid}" 2>/dev/null; then
+            log_msg "dashboard exited during startup"
+            rm -f "${PID_FILE}"
+            return 1
+        fi
+        if port_in_use; then
+            log_msg "started pid=${pid} port=${PORT}"
+            return 0
+        fi
+        sleep 1
+    done
+
+    log_msg "dashboard did not open port ${PORT} within 60s"
+    kill -TERM -- "-${pid}" 2>/dev/null || kill -TERM "${pid}" 2>/dev/null || true
+    rm -f "${PID_FILE}"
+    return 1
+}
+
+stop_process() {
+    local pid i
+    if [ ! -r "${PID_FILE}" ]; then
+        log_msg "not running"
+        return 0
+    fi
+    pid="$(head -n 1 "${PID_FILE}" | tr -d '[:space:]')"
+    case "${pid}" in
+        ''|*[!0-9]*)
+            rm -f "${PID_FILE}"
+            log_msg "not running (invalid pid file removed)"
+            return 0
+            ;;
+    esac
+    if ! kill -0 "${pid}" 2>/dev/null; then
+        rm -f "${PID_FILE}"
+        log_msg "not running (stale pid file removed)"
+        return 0
+    fi
+
+    log_msg "stopping pid=${pid}"
+    kill -TERM -- "-${pid}" 2>/dev/null || kill -TERM "${pid}" 2>/dev/null || true
+    for i in $(seq 1 20); do
+        if ! kill -0 "${pid}" 2>/dev/null; then
+            break
+        fi
+        sleep 1
+    done
+    if kill -0 "${pid}" 2>/dev/null; then
+        log_msg "sending KILL to pid=${pid}"
+        kill -KILL -- "-${pid}" 2>/dev/null || kill -KILL "${pid}" 2>/dev/null || true
+    fi
+    rm -f "${PID_FILE}"
+    log_msg "stopped"
+    return 0
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    case "${1:-}" in
+        start)
+            start_process
+            ;;
+        stop)
+            stop_process
+            ;;
+        status)
+            status_process && exit 0 || exit 3
+            ;;
+        *)
+            exit 1
+            ;;
+    esac
+fi
