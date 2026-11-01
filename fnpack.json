@@ -31,18 +31,18 @@
       "service_port": "49374",
       "releases": {
         "2.2.5": {
-          "changelog": "r2：修复安装阶段 install_init 权限问题；密码改为首次启动时生成。基于 OpenCode V2.2.5 linux-amd64 构建，提供 Web UI 与 CLI。",
+          "changelog": "r3：修复安装阶段 install_init 权限问题；密码改为首次启动时生成；开发者/发布者统一为 CrRinko。基于 OpenCode V2.2.5 linux-amd64 构建，提供 Web UI 与 CLI。",
           "i18n": {
             "en-US": {
-              "changelog": "r2: fixed install_init permissions and moved password creation to first start. Built from OpenCode V2.2.5 linux-amd64 with Web UI and CLI."
+              "changelog": "r3: fixed install_init permissions, moved password creation to first start, and aligned maintainer/distributor metadata to CrRinko. Built from OpenCode V2.2.5 linux-amd64 with Web UI and CLI."
             }
           },
-          "updated_at": "2026-11-01T08:45:00+08:00",
+          "updated_at": "2026-11-01T09:20:00+08:00",
           "packages": {
             "x86": {
-              "download_url": "https://github.com/CrRinko/FnDepot/releases/download/opencode-v2.2.5/opencode-2.2.5-fnos-amd64-r2.fpk",
-              "sha256": "7a348547346b6cd78237ef7b187c7ec25083c660986624044dc11d997f8dd824",
-              "size": 121154901
+              "download_url": "https://github.com/CrRinko/FnDepot/releases/download/opencode-v2.2.5/opencode-2.2.5-fnos-amd64-r3.fpk",
+              "sha256": "7fa917bbfd5334bf509a8489eb4070a9e2030d6ed0e34a3123a62d0fd296829a",
+              "size": 121153993
             }
           }
         }

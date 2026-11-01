@@ -25,10 +25,10 @@ https://github.com/CrRinko/FnDepot
 - 安装包：[GitHub Release](https://github.com/CrRinko/FnDepot/releases/tag/opencode-v2.2.5)
 - Web UI：`http://<NAS-IP>:49374`，用户名 `opencode`
 - 密码：没有固定默认密码，首次启动时随机生成；SSH 登录 NAS 后以 root 权限执行 `sudo cat /var/apps/opencode/etc/password` 获取
-- 文件：`opencode-2.2.5-fnos-amd64-r2.fpk`
-- 大小：121,154,901 字节
-- SHA-256：`7a348547346b6cd78237ef7b187c7ec25083c660986624044dc11d997f8dd824`
-- 说明：r2 修复了安装阶段 `install_init` 的权限问题，密码改为首次启动时生成。
+- 文件：`opencode-2.2.5-fnos-amd64-r3.fpk`
+- 大小：121,153,993 字节
+- SHA-256：`7fa917bbfd5334bf509a8489eb4070a9e2030d6ed0e34a3123a62d0fd296829a`
+- 说明：r3 修复了安装阶段 `install_init` 的权限问题，密码改为首次启动时生成，并将开发者/发布者统一为 CrRinko。
 - 使用说明：[apps/opencode/README.md](apps/opencode/README.md)
 
 ## 仓库结构

@@ -12,8 +12,8 @@ OpenCode V2 的 fnOS amd64 安装包，基于上游 **v2.2.5** 的 linux-amd64 �
 | 上游 commit | `9bbb8ce18c80f099e0e448775f59d965ead40a21` |
 | 二进制来源 | `@opencode/cli-linux-x64@2.2.5` |
 | 二进制 SHA-256 | `8d060e1d2fbb9bb44cf09ae6ed1f3f6a7cff070b5227e2f90970132b23a92050` |
-| FPK SHA-256 | `7a348547346b6cd78237ef7b187c7ec25083c660986624044dc11d997f8dd824` |
-| FPK 大小 | 121,154,901 字节 |
+| FPK SHA-256 | `7fa917bbfd5334bf509a8489eb4070a9e2030d6ed0e34a3123a62d0fd296829a` |
+| FPK 大小 | 121,153,993 字节 |
 
 ## 安装
 
@@ -22,14 +22,14 @@ OpenCode V2 的 fnOS amd64 安装包，基于上游 **v2.2.5** 的 linux-amd64 �
 安装包直接下载：
 
 ```text
-https://github.com/CrRinko/FnDepot/releases/download/opencode-v2.2.5/opencode-2.2.5-fnos-amd64-r2.fpk
+https://github.com/CrRinko/FnDepot/releases/download/opencode-v2.2.5/opencode-2.2.5-fnos-amd64-r3.fpk
 ```
 
 校验：
 
 ```bash
-sha256sum opencode-2.2.5-fnos-amd64-r2.fpk
-# 7a348547346b6cd78237ef7b187c7ec25083c660986624044dc11d997f8dd824
+sha256sum opencode-2.2.5-fnos-amd64-r3.fpk
+# 7fa917bbfd5334bf509a8489eb4070a9e2030d6ed0e34a3123a62d0fd296829a
 ```
 
 ## 登录 WebUI
