@@ -1,0 +1,8 @@
+#!/bin/bash
+set -u
+SETUP="${TRIM_APPDEST}/bin/hermes-setup"
+if [ ! -x "${SETUP}" ]; then
+    echo "hermes-setup not found: ${SETUP}" >&2
+    exit 1
+fi
+exec "${SETUP}"

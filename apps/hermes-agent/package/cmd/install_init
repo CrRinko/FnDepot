@@ -1,0 +1,6 @@
+#!/bin/bash
+# fnOS runs install_init before app directories exist and as the package user.
+# Keep this script side-effect free.
+set -u
+echo "[hermes-agent] install_init: no-op" >&2
+exit 0

@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+TRIM_PKGHOME="${TRIM_PKGHOME:-/vol1/@apphome/hermes-agent}"
+DATA_DIR="${TRIM_PKGHOME}/data"
+RUNTIME="${TRIM_PKGHOME}/runtime"
+export HOME="${DATA_DIR}"
+export HERMES_HOME="${DATA_DIR}"
+export PATH="${RUNTIME}/venv/bin:${RUNTIME}/node/bin:${RUNTIME}/bin:${PATH:-/usr/local/bin:/usr/bin:/bin}"
+exec "${RUNTIME}/venv/bin/hermes" "$@"
