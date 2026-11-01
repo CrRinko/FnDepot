@@ -1,0 +1,33 @@
+{
+  "appname": "hermes-agent",
+  "version": "0.22.5",
+  "upstream": {
+    "repo": "https://github.com/NousResearch/hermes-agent",
+    "tag": "v0.22.5",
+    "version": "0.22.5",
+    "commit": "bf0203a794a07aac3ff764972ab9087baa4e4f4e",
+    "source_url": "https://github.com/NousResearch/hermes-agent/archive/refs/tags/v0.22.5.tar.gz",
+    "source_sha256": "a8f67e5ec14fea681acef6cc7ff1553f002bb6101fd2df22bfdd4b7eecc54eb2",
+    "license": "MIT"
+  },
+  "runtime": {
+    "python": "3.14.9",
+    "python_sha256": "dfa4c5a40c47f338f41658017be550c72247c391e6bfb1fa4da03ebc8451abdf",
+    "uv": "0.13.5",
+    "uv_sha256": "f68d291c75783122dad58ab77def0e13f3233f358731db5d6d7e8715603b928f",
+    "node": "26.12.1",
+    "node_sha256": "6170b2d474e1c626f43cff3adc118df9fe3b573258a4fc3d850c8dbc6b079bbd",
+    "ripgrep": "15.2.0",
+    "ripgrep_sha256": "33e15bcf1624b25cdd2a55813a47a2f95dbe126268203e76aa6a585d1e7b149c"
+  },
+  "toolchain": {
+    "fnpack": "1.2.3",
+    "fnpack_sha256": "54b97fa7b70968c4d05c79840f5daeff508957d0bb2062fdb0376d00d9615c93"
+  },
+  "update": {
+    "mechanism": "external",
+    "distribution": "fnos",
+    "owner": "FnDepot"
+  },
+  "fpk": null
+}
