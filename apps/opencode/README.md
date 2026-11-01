@@ -32,6 +32,16 @@ sha256sum opencode-2.2.5-fnos-amd64-r2.fpk
 # 7a348547346b6cd78237ef7b187c7ec25083c660986624044dc11d997f8dd824
 ```
 
+## 登录 WebUI
+
+- 默认用户名：`opencode`
+- 默认密码：没有固定默认密码，首次启动时随机生成
+- 获取密码：SSH 登录 NAS 后执行：
+
+```bash
+cat /var/apps/opencode/etc/password
+```
+
 ## 使用
 
 安装后在 fnOS 应用中心启动 **OpenCode V2**。

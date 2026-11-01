@@ -23,6 +23,8 @@ https://github.com/CrRinko/FnDepot
 开源 AI 编程代理，提供 Web UI 与 CLI。本包基于上游 OpenCode v2.2.5 的 linux-amd64 制品构建。
 
 - 安装包：[GitHub Release](https://github.com/CrRinko/FnDepot/releases/tag/opencode-v2.2.5)
+- Web UI：`http://<NAS-IP>:49374`，用户名 `opencode`
+- 密码：没有固定默认密码，首次启动时随机生成；SSH 登录 NAS 后执行 `cat /var/apps/opencode/etc/password` 获取
 - 文件：`opencode-2.2.5-fnos-amd64-r2.fpk`
 - 大小：121,154,901 字节
 - SHA-256：`7a348547346b6cd78237ef7b187c7ec25083c660986624044dc11d997f8dd824`
