@@ -29,6 +29,7 @@ RG_SHA256="33e15bcf1624b25cdd2a55813a47a2f95dbe126268203e76aa6a585d1e7b149c"
 
 SOURCE_URL="https://github.com/NousResearch/hermes-agent/archive/refs/tags/v0.22.5.tar.gz"
 SOURCE_SHA256="a8f67e5ec14fea681acef6cc7ff1553f002bb6101fd2df22bfdd4b7eecc54eb2"
+PATCHED_SOURCE_SHA256="__PATCHED_SOURCE_SHA256__"
 
 TRIM_APPDEST="${TRIM_APPDEST:-}"
 TRIM_PKGHOME="${TRIM_PKGHOME:-}"
@@ -87,10 +88,11 @@ github_mirrors() {
     if [ -n "${HERMES_DOWNLOAD_MIRROR:-}" ]; then
         printf '%s\n' "${HERMES_DOWNLOAD_MIRROR%/}/${url}"
     fi
-    printf '%s\n' "$url"
     printf '%s\n' "https://ghproxy.com/${url}"
     printf '%s\n' "https://gh-proxy.com/${url}"
+    printf '%s\n' "https://ghfast.top/${url}"
     printf '%s\n' "https://mirror.ghproxy.com/${url}"
+    printf '%s\n' "$url"
 }
 
 node_mirrors() {
@@ -98,8 +100,8 @@ node_mirrors() {
     if [ -n "${HERMES_DOWNLOAD_MIRROR:-}" ]; then
         printf '%s\n' "${HERMES_DOWNLOAD_MIRROR%/}/${url}"
     fi
-    printf '%s\n' "$url"
     printf '%s\n' "${url/https:\/\/nodejs.org\/dist/https://npmmirror.com/mirrors/node}"
+    printf '%s\n' "$url"
 }
 
 download_first() {
@@ -110,7 +112,8 @@ download_first() {
         [ -n "${url}" ] || continue
         log "downloading ${url}"
         rm -f "${destination}.part"
-        if curl -fsSL --retry 3 --connect-timeout 15 --max-time 900 \
+        if curl -fsSL --retry 2 --connect-timeout 15 --max-time 900 \
+            --speed-limit 1024 --speed-time 60 \
             -o "${destination}.part" "${url}"; then
             actual="$(sha256_file "${destination}.part")"
             if [ "${actual}" = "${expected}" ]; then
@@ -187,13 +190,24 @@ cache_path() {
 }
 
 install_source() {
-    local tarball tmp
+    local tarball tmp bundled expected
     tarball="$(cache_path "hermes-agent-${VERSION}.tar.gz")"
+    bundled="${TRIM_APPDEST}/source/hermes-agent-${VERSION}-fnos.tar.gz"
+    expected="${PATCHED_SOURCE_SHA256}"
+    if [ "${expected}" = "__PATCHED_SOURCE_SHA256__" ]; then
+        expected="${SOURCE_SHA256}"
+    fi
     tmp="${RUNTIME}/.source.tmp"
     mkdir -p "${RUNTIME}/.cache"
     rm -rf "${tmp}"
     mkdir -p "${tmp}"
-    if [ ! -f "${tarball}" ] || [ "$(sha256_file "${tarball}")" != "${SOURCE_SHA256}" ]; then
+    if [ -f "${bundled}" ]; then
+        if [ "$(sha256_file "${bundled}")" != "${expected}" ]; then
+            fail "bundled source checksum mismatch: ${bundled}"
+        fi
+        log "using bundled source ${bundled}"
+        tarball="${bundled}"
+    elif [ ! -f "${tarball}" ] || [ "$(sha256_file "${tarball}")" != "${SOURCE_SHA256}" ]; then
         local -a urls
         mapfile -t urls < <(github_mirrors "${SOURCE_URL}")
         download_first "${tarball}" "${SOURCE_SHA256}" "${urls[@]}" ||
@@ -265,11 +279,11 @@ ensure_node() {
         local -a urls
         mapfile -t urls < <(node_mirrors "${NODE_URL}")
         download_first "${tarball}" "${NODE_SHA256}" "${urls[@]}" ||
-            fail "failed to download Node ${NODE_VERSION}"
+            return 1
     fi
     tar -xJf "${tarball}" -C "${tmp}" --strip-components=1 ||
-        fail "failed to extract Node ${NODE_VERSION}"
-    [ -x "${tmp}/bin/node" ] || fail "Node archive has no bin/node"
+        return 1
+    [ -x "${tmp}/bin/node" ] || return 1
     rm -rf "${RUNTIME}/node"
     mv "${tmp}" "${RUNTIME}/node"
 }
@@ -288,34 +302,68 @@ ensure_ripgrep() {
         local -a urls
         mapfile -t urls < <(github_mirrors "${RG_URL}")
         download_first "${tarball}" "${RG_SHA256}" "${urls[@]}" ||
-            fail "failed to download ripgrep ${RG_VERSION}"
+            return 1
     fi
     tar -xzf "${tarball}" -C "${tmp}" --strip-components=1 ||
-        fail "failed to extract ripgrep ${RG_VERSION}"
-    [ -x "${tmp}/rg" ] || fail "ripgrep archive has no rg binary"
+        return 1
+    [ -x "${tmp}/rg" ] || return 1
     mv -f "${tmp}/rg" "${rg}"
     chmod 755 "${rg}"
 }
 
+detect_pypi_mirror() {
+    local candidate
+    for candidate in \
+        "https://mirrors.aliyun.com/pypi/simple/" \
+        "https://pypi.tuna.tsinghua.edu.cn/simple/" \
+        "https://mirrors.cloud.tencent.com/pypi/simple/" \
+        "https://pypi.mirrors.ustc.edu.cn/simple/" \
+        "https://pypi.org/simple/"; do
+        if curl -fsSI --max-time 6 "${candidate}hermes-agent/" >/dev/null 2>&1; then
+            printf '%s' "${candidate}"
+            return 0
+        fi
+    done
+    printf '%s' "https://pypi.org/simple/"
+}
+
 sync_venv() {
-    local uv="${RUNTIME}/bin/uv" py="${RUNTIME}/python/bin/python3"
+    local uv="${RUNTIME}/bin/uv" py="${RUNTIME}/python/bin/python3" index_url
     if [ -x "${VENV}/bin/hermes" ] &&
         "${VENV}/bin/hermes" --version 2>/dev/null | grep -q "${VERSION}"; then
         return 0
     fi
     [ -x "${uv}" ] || fail "uv is not installed"
     [ -x "${py}" ] || fail "Python is not installed"
+    index_url="$(detect_pypi_mirror)"
+    log "PyPI fallback index: ${index_url}"
     rm -rf "${VENV}"
-    "${uv}" venv --python "${py}" "${VENV}" || fail "uv venv failed"
-    (
+    if ! env UV_CACHE_DIR="${RUNTIME}/.uv-cache" \
+        "${uv}" venv --python "${py}" "${VENV}" >> "${LOG_FILE}" 2>&1; then
+        fail "uv venv failed: $(tail -n 8 "${LOG_FILE}" | tr '\n' ' ')"
+    fi
+    if ! (
         cd "${SRC}" || exit 1
-        UV_PROJECT_ENVIRONMENT="${VENV}" \
-        UV_PYTHON="${py}" \
-        UV_CACHE_DIR="${RUNTIME}/.uv-cache" \
-        UV_CONCURRENT_DOWNLOADS=16 \
-        UV_CONCURRENT_INSTALLS=8 \
+        env -u UV_INDEX_URL \
+            UV_PROJECT_ENVIRONMENT="${VENV}" \
+            UV_PYTHON="${py}" \
+            UV_CACHE_DIR="${RUNTIME}/.uv-cache" \
+            UV_CONCURRENT_DOWNLOADS=16 \
+            UV_CONCURRENT_INSTALLS=8 \
             "${uv}" sync --extra "${HERMES_SETUP_EXTRAS:-all}" --locked
-    ) || fail "uv sync failed"
+    ); then
+        log "uv sync via official PyPI failed; retrying ${index_url}"
+        (
+            cd "${SRC}" || exit 1
+            UV_INDEX_URL="${index_url}" \
+            UV_PROJECT_ENVIRONMENT="${VENV}" \
+            UV_PYTHON="${py}" \
+            UV_CACHE_DIR="${RUNTIME}/.uv-cache" \
+            UV_CONCURRENT_DOWNLOADS=16 \
+            UV_CONCURRENT_INSTALLS=8 \
+                "${uv}" sync --extra "${HERMES_SETUP_EXTRAS:-all}" --locked
+        ) || fail "uv sync failed"
+    fi
     [ -x "${VENV}/bin/hermes" ] || fail "hermes entry point missing after uv sync"
 }
 
@@ -363,11 +411,12 @@ print_check() {
 }
 
 main() {
-    local check_only=0 force=0
+    local check_only=0 force=0 prepare_only=0
     while [ "$#" -gt 0 ]; do
         case "$1" in
             --check) check_only=1 ;;
             --force) force=1 ;;
+            --prepare-only) prepare_only=1 ;;
             --version)
                 shift
                 [ "$#" -gt 0 ] || fail "--version requires a value"
@@ -414,11 +463,15 @@ main() {
         install_source
         ensure_python
         ensure_uv
-        ensure_node
-        ensure_ripgrep
+        log "using fnOS nodejs_v24 / system tools instead of bundled Node and ripgrep"
     fi
     install_stamp
     copy_web_dist
+    if [ "${prepare_only}" -eq 1 ]; then
+        fix_permissions
+        log "runtime prepared; venv will be built on first start"
+        exit 0
+    fi
     if [ "${need_full}" -eq 1 ] || [ ! -x "${VENV}/bin/hermes" ]; then
         sync_venv
     fi

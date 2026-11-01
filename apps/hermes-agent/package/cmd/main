@@ -132,12 +132,12 @@ start_process() {
     rm -f "${PID_FILE}"
     if command -v setsid >/dev/null 2>&1; then
         setsid env HOME="${DATA_DIR}" HERMES_HOME="${DATA_DIR}" \
-            PATH="${VENV}/bin:${RUNTIME}/node/bin:${RUNTIME}/bin:/usr/local/bin:/usr/bin:/bin" \
+            PATH="${VENV}/bin:${RUNTIME}/node/bin:${RUNTIME}/bin:/var/apps/nodejs_v24/target/bin:/vol1/@appcenter/nodejs_v24/bin:/usr/local/bin:/usr/bin:/bin" \
             nohup "${HERMES}" dashboard --host 0.0.0.0 --port "${PORT}" --no-open --skip-build \
             >> "${LOG_FILE}" 2>&1 &
     else
         env HOME="${DATA_DIR}" HERMES_HOME="${DATA_DIR}" \
-            PATH="${VENV}/bin:${RUNTIME}/node/bin:${RUNTIME}/bin:/usr/local/bin:/usr/bin:/bin" \
+            PATH="${VENV}/bin:${RUNTIME}/node/bin:${RUNTIME}/bin:/var/apps/nodejs_v24/target/bin:/vol1/@appcenter/nodejs_v24/bin:/usr/local/bin:/usr/bin:/bin" \
             nohup "${HERMES}" dashboard --host 0.0.0.0 --port "${PORT}" --no-open --skip-build \
             >> "${LOG_FILE}" 2>&1 &
     fi

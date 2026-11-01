@@ -270,7 +270,12 @@ def ensure_fnpack(explicit: Path | None) -> Path:
 
 
 def stage_package(
-    version: str, commit: str, revision: str, web_dist: Path
+    version: str,
+    commit: str,
+    revision: str,
+    web_dist: Path,
+    patched_source: Path,
+    patched_source_sha256: str,
 ) -> tuple[Path, Path]:
     root = Path(tempfile.mkdtemp(prefix="hermes-agent-stage-"))
     stage = root / "stage"
@@ -309,6 +314,21 @@ def stage_package(
         shutil.rmtree(web_destination)
     shutil.copytree(web_dist, web_destination)
 
+    source_destination = stage / "app/source"
+    source_destination.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(
+        patched_source,
+        source_destination / f"hermes-agent-{version}-fnos.tar.gz",
+    )
+    setup_script = stage / "app/bin/hermes-setup"
+    setup_text = setup_script.read_text(encoding="utf-8")
+    if "__PATCHED_SOURCE_SHA256__" not in setup_text:
+        raise BuildError("hermes-setup is missing the PATCHED_SOURCE_SHA256 placeholder")
+    setup_script.write_text(
+        setup_text.replace("__PATCHED_SOURCE_SHA256__", patched_source_sha256),
+        encoding="utf-8",
+    )
+
     for path in list((stage / "cmd").iterdir()) + list((stage / "app/bin").iterdir()):
         if path.is_file():
             path.chmod(path.stat().st_mode | 0o111)
@@ -345,7 +365,9 @@ def run_fnpack(fnpack: Path, stage: Path, out_dir: Path, version: str, suffix: s
     return artifact
 
 
-def verify_fpk(artifact: Path, version: str) -> dict[str, object]:
+def verify_fpk(
+    artifact: Path, version: str, source_sha256: str, patched_source_sha256: str
+) -> dict[str, object]:
     with tarfile.open(artifact, "r:gz") as outer:
         names = outer.getnames()
         for name in names:
@@ -379,9 +401,26 @@ def verify_fpk(artifact: Path, version: str) -> dict[str, object]:
 
         with tarfile.open(fileobj=io.BytesIO(app_bytes), mode="r:gz") as inner:
             inner_names = set(inner.getnames())
-            for required in ("web_dist/index.html", "install-stamp.json", "bin/hermes-setup"):
-                if required not in inner_names:
-                    raise BuildError(f"app.tgz is missing {required}")
+            required = (
+                "web_dist/index.html",
+                "install-stamp.json",
+                "bin/hermes-setup",
+                f"source/hermes-agent-{version}-fnos.tar.gz",
+            )
+            for name in required:
+                if name not in inner_names:
+                    raise BuildError(f"app.tgz is missing {name}")
+            source_member = inner.extractfile(
+                f"source/hermes-agent-{version}-fnos.tar.gz"
+            )
+            if source_member is None:
+                raise BuildError("bundled source tarball is not readable")
+            source_digest = hashlib.sha256(source_member.read()).hexdigest()
+            if source_digest != patched_source_sha256:
+                raise BuildError(
+                    f"bundled source checksum mismatch: got {source_digest}, "
+                    f"expected {patched_source_sha256}"
+                )
 
         for icon, expected in (("ICON.PNG", 64), ("ICON_256.PNG", 256)):
             member = outer.extractfile(icon)
@@ -412,10 +451,13 @@ def privacy_scan() -> None:
     )
     allowed_emails = {"9782921+CrRinko@users.noreply.github.com"}
     excluded = {".cache", "dist", "__pycache__", "web_dist"}
+    hash_metadata = {"provenance.json", "install-stamp.json", "version.env", "SOURCE_COMMIT"}
     for path in APP_DIR.rglob("*"):
         if not path.is_file():
             continue
         if any(part in excluded for part in path.parts):
+            continue
+        if path.name in hash_metadata:
             continue
         try:
             text = path.read_text(encoding="utf-8")
@@ -503,6 +545,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--version", default=default_version, help="upstream version (default: VERSION)")
     parser.add_argument("--source-commit", default=default_commit, help="upstream commit")
     parser.add_argument("--source-tarball", type=Path, help="local upstream source tarball")
+    parser.add_argument(
+        "--patched-source",
+        type=Path,
+        help="patched source tarball with Android-only psutil removed and an official uv.lock",
+    )
     parser.add_argument("--expected-sha256", default=SOURCE_SHA256, help="expected source SHA-256")
     parser.add_argument("--web-dist", type=Path, help="prebuilt hermes_cli/web_dist directory")
     parser.add_argument("--fnpack", type=Path, help="explicit fnpack binary")
@@ -531,6 +578,25 @@ def main() -> int:
     source_tarball = ensure_source_tarball(version, args.source_tarball, source_sha)
     source_digest = sha256_file(source_tarball)
 
+    if args.patched_source is None:
+        raise BuildError("--patched-source is required for a full build")
+    patched_source = args.patched_source.expanduser().resolve()
+    if not patched_source.is_file():
+        raise BuildError(f"patched source does not exist: {patched_source}")
+    with tarfile.open(patched_source, "r:gz") as archive:
+        prefix = f"hermes-agent-{version}/"
+        pyproject = archive.extractfile(prefix + "pyproject.toml")
+        lockfile = archive.extractfile(prefix + "uv.lock")
+        if pyproject is None or lockfile is None:
+            raise BuildError("patched source has no pyproject.toml or uv.lock")
+        pyproject_text = pyproject.read().decode("utf-8")
+        lockfile_text = lockfile.read().decode("utf-8")
+        if "psutil @ git+https://github.com/giampaolo/psutil.git" in pyproject_text:
+            raise BuildError("patched source still contains the Android psutil pin")
+        if "giampaolo/psutil" in lockfile_text:
+            raise BuildError("patched source still locks the Android psutil git package")
+    patched_source_digest = sha256_file(patched_source)
+
     if args.web_dist is not None:
         web_dist = args.web_dist.expanduser().resolve()
         if not (web_dist / "index.html").is_file():
@@ -541,10 +607,19 @@ def main() -> int:
 
     fnpack = ensure_fnpack(args.fnpack)
     revision = suffix or "r0"
-    stage_root, stage = stage_package(version, args.source_commit, revision, web_dist)
+    stage_root, stage = stage_package(
+        version,
+        args.source_commit,
+        revision,
+        web_dist,
+        patched_source,
+        patched_source_digest,
+    )
     try:
         artifact = run_fnpack(fnpack, stage, args.out, version, suffix)
-        verification = verify_fpk(artifact, version)
+        verification = verify_fpk(
+            artifact, version, source_digest, patched_source_digest
+        )
     finally:
         if not args.keep_staging:
             shutil.rmtree(stage_root, ignore_errors=True)
@@ -558,6 +633,10 @@ def main() -> int:
         "source": {
             "url": provenance["upstream"]["source_url"],
             "sha256": source_digest,
+        },
+        "patched_source": {
+            "path": str(patched_source),
+            "sha256": patched_source_digest,
         },
         "web_dist": {"sha256": web_digest},
         "fnpack": {"version": FNPACK_VERSION, "sha256": sha256_file(fnpack)},

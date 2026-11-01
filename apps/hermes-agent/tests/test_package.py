@@ -50,3 +50,20 @@ class PackageMetadataTest(unittest.TestCase):
         self.assertEqual(stamp["updateMechanism"], "external")
         self.assertEqual(stamp["distribution"], "fnos")
         self.assertEqual(stamp["displayVersion"], "0.22.5")
+
+
+class FnDepotEntryTest(unittest.TestCase):
+    def test_hermes_entry_matches_artifact(self):
+        fnpack = json.loads((REPO / "fnpack.json").read_text())
+        app = fnpack["apps"]["hermes-agent"]
+        self.assertEqual(app["platform"], ["x86"])
+        self.assertEqual(app["service_port"], "49375")
+        self.assertEqual(app["maintainer"], "CrRinko")
+        release = app["releases"]["0.22.5"]
+        package = release["packages"]["x86"]
+        artifact = APP / "dist/hermes-agent-0.22.5-fnos-amd64.fpk"
+        if artifact.is_file():
+            import hashlib
+            digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+            self.assertEqual(package["sha256"], digest)
+            self.assertEqual(package["size"], artifact.stat().st_size)
