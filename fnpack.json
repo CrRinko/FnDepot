@@ -4,7 +4,7 @@
     "name": "CrRinko 的 FnOS 应用源",
     "author": "CrRinko",
     "homepage": "https://github.com/CrRinko/FnDepot",
-    "description": "个人 FnOS 应用源，提供 OpenCode V2 等应用。"
+    "description": "个人 FnOS 应用源，提供 OpenCode V2、Hermes Agent 等应用。"
   },
   "apps": {
     "opencode": {
@@ -16,8 +16,13 @@
           "desc": "Open-source AI coding agent with a Web UI and CLI. Web UI username: opencode. There is no fixed default password; it is generated on first start. Run sudo cat /var/apps/opencode/etc/password as root on the NAS to read it. Built from upstream OpenCode V2.2.5 linux-amd64 for x86 devices only."
         }
       },
-      "platform": ["x86"],
-      "categories": ["编程开发", "AI赋能"],
+      "platform": [
+        "x86"
+      ],
+      "categories": [
+        "编程开发",
+        "AI赋能"
+      ],
       "icon_url": "apps/opencode/icon-256.png",
       "readme_url": "apps/opencode/README.md",
       "bug_report_url": "https://github.com/CrRinko/FnDepot/issues",
@@ -43,6 +48,52 @@
               "download_url": "https://github.com/CrRinko/FnDepot/releases/download/opencode-v2.2.5/opencode-2.2.5-fnos-amd64-r3.fpk",
               "sha256": "7fa917bbfd5334bf509a8489eb4070a9e2030d6ed0e34a3123a62d0fd296829a",
               "size": 121153993
+            }
+          }
+        }
+      }
+    },
+    "hermes-agent": {
+      "display_name": "Hermes Agent",
+      "desc": "Hermes Agent 官方 AI Agent，提供官方 Web Dashboard。首次启动后用户名 hermes，密码随机生成。SSH 登录 NAS 后以 root 权限执行 sudo cat /var/apps/hermes-agent/etc/password 获取密码。首次安装约 10–20 分钟，仅支持 x86 设备。",
+      "i18n": {
+        "en-US": {
+          "display_name": "Hermes Agent",
+          "desc": "Official Hermes Agent AI assistant with its official web dashboard. Username: hermes. The password is generated on first start; run sudo cat /var/apps/hermes-agent/etc/password as root on the NAS to read it. First install takes about 10-20 minutes. x86 devices only."
+        }
+      },
+      "platform": [
+        "x86"
+      ],
+      "categories": [
+        "AI赋能",
+        "系统工具"
+      ],
+      "icon_url": "apps/hermes-agent/icon-256.png",
+      "readme_url": "apps/hermes-agent/README.md",
+      "bug_report_url": "https://github.com/CrRinko/FnDepot/issues",
+      "maintainer": "CrRinko",
+      "maintainer_url": "https://github.com/CrRinko",
+      "distributor": "CrRinko",
+      "distributor_url": "https://github.com/CrRinko",
+      "run_as": "package",
+      "install_type": "",
+      "is_docker": false,
+      "service_port": "49375",
+      "releases": {
+        "0.22.5": {
+          "changelog": "首发：基于上游 Hermes Agent v0.22.5，官方 dashboard，随机密码登录；FPK 内置源码，安装时创建 Python 3.14 运行时；内置更新由 FnDepot/应用中心接管。",
+          "i18n": {
+            "en-US": {
+              "changelog": "Initial release based on upstream Hermes Agent v0.22.5 with the official dashboard, generated password login, bundled source, and an install-time Python 3.14 runtime. Updates are owned by FnDepot/App Center."
+            }
+          },
+          "updated_at": "2026-11-01T18:30:00+08:00",
+          "packages": {
+            "x86": {
+              "download_url": "https://github.com/CrRinko/FnDepot/releases/download/hermes-agent-v0.22.5/hermes-agent-0.22.5-fnos-amd64.fpk",
+              "sha256": "c5c3d33b70ee3430160ec84248f7d97156e12858d31037e4ed9124c34c9d5f9c",
+              "size": 91383205
             }
           }
         }

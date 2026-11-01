@@ -1,0 +1,10 @@
+Hermes Agent is developed by Nous Research and licensed under the MIT License.
+https://github.com/NousResearch/hermes-agent
+
+This fnOS package is an independent third-party packaging by CrRinko.
+The fnOS lifecycle scripts, build scripts, and documentation in this directory
+are licensed under the MIT License. No source code from any GPL-licensed
+community fnOS package is included.
+
+The bundled patched source removes the Android-only psutil git pin and
+regenerates uv.lock with the official PyPI index. Linux still uses psutil 7.2.2.

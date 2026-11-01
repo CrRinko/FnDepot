@@ -496,3 +496,14 @@ PyPI：默认使用 `https://pypi.org/simple/`；安装脚本探测阿里云/清
 6. **数据根与卸载**：权威数据根是 `TRIM_PKGHOME/data`；数据共享目录用于用户文件交换；卸载不主动删除 `data/`，README 给出备份/清理命令。
 7. **镜像环境变量**：安装脚本内置镜像回退，不依赖应用中心环境变量；`HERMES_DOWNLOAD_MIRROR` 仅用于手动调试。
 8. **install-stamp**：仓库提交静态 `install-stamp.json`（`baseVersion=0.22.5`、`updateMechanism=external`、`distribution=fnos`），构建时校验，安装时复制到源码根目录；修复 `hermes --version=unknown`，并让 `hermes update` / dashboard 更新动作拒绝执行。
+
+## 12. 实机安装后的实现偏差（2026-11-01）
+
+真实 fnOS 设备（x86、fnOS 1.2.0800、卷 1）验证后，对原设计做了以下调整：
+
+1. **源码随 FPK 分发**：FPK 内置约 86 MB 的源码 tarball，安装时不再从 GitHub 下载 84 MB 源码。最终 FPK 约 91.4 MB，仍低于 GitHub 100 MB 单文件限制。
+2. **源码补丁**：构建时移除上游 `pyproject.toml` 中 Android-only 的 `psutil @ git+...`，并用官方 PyPI 重新生成 `uv.lock`。否则 NAS 上的 `uv sync --locked` 会尝试构建 Android 专用 git psutil，导致安装超时。
+3. **安装回调执行完整安装**：`install_callback` 直接运行 `hermes-setup`（不再使用 prepare-only），在应用中心安装任务内完成 Python/uv 下载和 `uv sync --locked`；首次启动只做密码/配置和启动，避免启动任务重复解压源码。
+4. **不下载 Node/ripgrep**：dashboard 不依赖它们；如 NAS 已安装 fnOS `nodejs_v24`，`cmd/main` 和 `hermes` 包装器会把它加入 PATH。`hermes-setup` 仅保留可选函数，不在安装路径调用。
+5. **PyPI 使用官方索引**：国内 PyPI 镜像（如阿里云）缺少 upload-time，与 `uv.lock` 的 `exclude-newer` 不兼容，会让 `uv sync --locked` 误判无解。安装脚本优先官方 PyPI，镜像只作为失败后的备用（可能仍因 upload-time 失败）。
+6. **构建接口**：`build.py` 新增 `--patched-source`；`scripts/prepare_source.py` 负责生成补丁源码。provenance 记录上游源码和补丁源码两个 SHA-256。
