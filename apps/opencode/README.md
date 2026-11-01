@@ -36,11 +36,13 @@ sha256sum opencode-2.2.5-fnos-amd64-r2.fpk
 
 - 默认用户名：`opencode`
 - 默认密码：没有固定默认密码，首次启动时随机生成
-- 获取密码：SSH 登录 NAS 后执行：
+- 获取密码：密码文件权限为 `0600`，属主是 `opencode`，普通用户无法直接读取。SSH 登录 NAS 后以 root 权限执行：
 
 ```bash
-cat /var/apps/opencode/etc/password
+sudo cat /var/apps/opencode/etc/password
 ```
+
+也可以先执行 `su -` 切换到 root，再执行 `cat /var/apps/opencode/etc/password`。
 
 ## 使用
 

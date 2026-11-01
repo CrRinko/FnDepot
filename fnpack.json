@@ -9,11 +9,11 @@
   "apps": {
     "opencode": {
       "display_name": "OpenCode V2",
-      "desc": "开源 AI 编程代理，提供 Web UI 与 CLI。Web UI 默认用户名：opencode；密码没有固定默认值，首次启动时随机生成。SSH 登录 NAS 后执行 cat /var/apps/opencode/etc/password 获取。本包基于上游 OpenCode V2.2.5 linux-amd64 构建，仅适用于 x86 设备。",
+      "desc": "开源 AI 编程代理，提供 Web UI 与 CLI。Web UI 默认用户名：opencode；密码没有固定默认值，首次启动时随机生成。SSH 登录 NAS 后以 root 权限执行 sudo cat /var/apps/opencode/etc/password 获取。本包基于上游 OpenCode V2.2.5 linux-amd64 构建，仅适用于 x86 设备。",
       "i18n": {
         "en-US": {
           "display_name": "OpenCode V2",
-          "desc": "Open-source AI coding agent with a Web UI and CLI. Web UI username: opencode. There is no fixed default password; it is generated on first start. Run cat /var/apps/opencode/etc/password on the NAS to read it. Built from upstream OpenCode V2.2.5 linux-amd64 for x86 devices only."
+          "desc": "Open-source AI coding agent with a Web UI and CLI. Web UI username: opencode. There is no fixed default password; it is generated on first start. Run sudo cat /var/apps/opencode/etc/password as root on the NAS to read it. Built from upstream OpenCode V2.2.5 linux-amd64 for x86 devices only."
         }
       },
       "platform": ["x86"],

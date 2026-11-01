@@ -8,7 +8,7 @@ Web UI
 ------
 URL:      http://<NAS-IP>:49374
 Username: opencode
-Password: cat /var/apps/opencode/etc/password
+Password: sudo cat /var/apps/opencode/etc/password
 
 The password is generated randomly on first start. Only administrators can
 see the app entry by default.
