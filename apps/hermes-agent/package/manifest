@@ -1,0 +1,15 @@
+appname               = hermes-agent
+version               = 0.22.5
+display_name          = Hermes Agent
+desc                  = "Hermes Agent 官方 AI Agent，提供官方 Web Dashboard。首次启动后用户名 hermes，密码随机生成。SSH 登录 NAS 后以 root 权限执行 sudo cat /var/apps/hermes-agent/etc/password 获取密码。仅支持 x86 设备。"
+platform              = x86
+source                = thirdparty
+maintainer            = CrRinko
+maintainer_url        = https://github.com/CrRinko
+distributor           = CrRinko
+distributor_url       = https://github.com/CrRinko
+desktop_uidir         = ui
+desktop_applaunchname = hermes-agent.main
+ctl_stop              = true
+service_port          = 49375
+checkport             = true

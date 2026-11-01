@@ -1,0 +1,16 @@
+{
+  ".url": {
+    "hermes-agent.main": {
+      "title": "Hermes Agent",
+      "icon": "images/icon_{0}.png",
+      "type": "url",
+      "protocol": "http",
+      "port": "49375",
+      "url": "/",
+      "allUsers": false,
+      "control": {
+        "accessPerm": "readonly"
+      }
+    }
+  }
+}

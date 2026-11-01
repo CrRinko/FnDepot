@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 2,
+  "commit": "bf0203a794a07aac3ff764972ab9087baa4e4f4e",
+  "commitDate": 1761187425,
+  "branch": "v0.22.5",
+  "builtAt": "2026-11-01T00:00:00+00:00",
+  "dirty": false,
+  "source": "fndepot",
+  "distribution": "fnos",
+  "updateMechanism": "external",
+  "baseVersion": "0.22.5",
+  "displayVersion": "0.22.5",
+  "distance": 0,
+  "payload": "bootstrap",
+  "tag": null
+}

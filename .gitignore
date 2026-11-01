@@ -6,3 +6,10 @@ dist/
 # Host metadata
 .DS_Store
 Thumbs.db
+
+# Hermes Agent build inputs and generated frontend
+apps/hermes-agent/.cache/
+apps/hermes-agent/dist/
+apps/hermes-agent/package/app/web_dist/
+apps/hermes-agent/node_modules/
+apps/hermes-agent/**/node_modules/
