@@ -36,9 +36,9 @@
   "fpk": {
     "revision": "r0",
     "name": "hermes-agent-0.22.5-fnos-amd64.fpk",
-    "sha256": "f1c620c5c0c58d0a00975b3a953959e08605fb4612d3751531c1d0ee06c8b36e",
-    "size": 1592011,
-    "app_tgz_md5": "e3132a3bec353de0dc2f169267475a6b",
+    "sha256": "3560fa0fc90ce1a9b228b959585427abece51bd493ae66101dabeb04e470abc7",
+    "size": 1592145,
+    "app_tgz_md5": "2cf0dfdbcc9eb77f43c4eeace5beb217",
     "release_url": "https://github.com/CrRinko/FnDepot/releases/tag/hermes-agent-v0.22.5",
     "download_url": "https://github.com/CrRinko/FnDepot/releases/download/hermes-agent-v0.22.5/hermes-agent-0.22.5-fnos-amd64.fpk"
   }
