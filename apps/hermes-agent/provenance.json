@@ -29,5 +29,17 @@
     "distribution": "fnos",
     "owner": "FnDepot"
   },
-  "fpk": null
+  "web_dist": {
+    "sha256": "c386e19a256127f2686cd2c2addf747a9eee312e5096de5d272ccd82955aee30",
+    "builder": "node 26.12.1 / npm ci --workspace web / npm run build -w web"
+  },
+  "fpk": {
+    "revision": "r0",
+    "name": "hermes-agent-0.22.5-fnos-amd64.fpk",
+    "sha256": "f1c620c5c0c58d0a00975b3a953959e08605fb4612d3751531c1d0ee06c8b36e",
+    "size": 1592011,
+    "app_tgz_md5": "e3132a3bec353de0dc2f169267475a6b",
+    "release_url": "https://github.com/CrRinko/FnDepot/releases/tag/hermes-agent-v0.22.5",
+    "download_url": "https://github.com/CrRinko/FnDepot/releases/download/hermes-agent-v0.22.5/hermes-agent-0.22.5-fnos-amd64.fpk"
+  }
 }
