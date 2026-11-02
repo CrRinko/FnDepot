@@ -17,7 +17,7 @@ https://github.com/CrRinko/FnDepot
 | 应用 | 版本 | 架构 | 分类 |
 | --- | --- | --- | --- |
 | [OpenCode V2](apps/opencode/README.md) | 2.2.5 | x86 | 编程开发 / AI赋能 |
-| [Hermes Agent](apps/hermes-agent/README.md) | 0.22.5 | x86 | AI赋能 / 系统工具 |
+| [Hermes Agent](apps/hermes-agent/README.md) | 0.22.5.3 | x86 | AI赋能 / 系统工具 |
 
 ### OpenCode V2
 
@@ -36,13 +36,13 @@ https://github.com/CrRinko/FnDepot
 
 Nous Research Hermes Agent 的官方 Web Dashboard，直接运行上游 `hermes dashboard`，不包含自定义控制台。本包基于上游 v0.22.5 构建，FPK 内置补丁源码，安装时创建 Python 3.14 运行时。
 
-- 安装包：[GitHub Release](https://github.com/CrRinko/FnDepot/releases/tag/hermes-agent-v0.22.5)
+- 安装包：[GitHub Release](https://github.com/CrRinko/FnDepot/releases/tag/hermes-agent-v0.22.5.3)
 - Web UI：`http://<NAS-IP>:49375`，用户名 `hermes`
 - 密码：没有固定默认密码，首次启动时随机生成；SSH 登录 NAS 后以 root 权限执行 `sudo cat /var/apps/hermes-agent/etc/password` 获取
-- 文件：`hermes-agent-0.22.5-fnos-amd64.fpk`
-- 大小：91,383,742 字节
-- SHA-256：`9af534abbbe3e6343b811b0327e62a7ffce96062a11d94dff89873da78fb1ec9`
-- 说明：首次安装约 10–20 分钟；内置更新由 FnDepot/应用中心接管，`hermes update` 会拒绝执行。
+- 文件：`hermes-agent-0.22.5.3-fnos-amd64-r2.fpk`
+- 大小：89,275,531 字节
+- SHA-256：`9ac7a9cd1484757a8ec2b2a3710bb50f4595927e97e5beed1b68545576371136`
+- 说明：应用版本 0.22.5.3 对应上游 v0.22.5 的 r2 打包修订；首次安装约 30–60 分钟。内置更新由 FnDepot/应用中心接管，`hermes update` 会拒绝执行。
 - 使用说明：[apps/hermes-agent/README.md](apps/hermes-agent/README.md)
 
 ## 仓库结构

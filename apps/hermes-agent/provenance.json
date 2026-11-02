@@ -1,5 +1,6 @@
 {
   "appname": "hermes-agent",
+  "app_version": "0.22.5.3",
   "version": "0.22.5",
   "upstream": {
     "repo": "https://github.com/NousResearch/hermes-agent",
@@ -34,21 +35,21 @@
     "builder": "node 26.12.1 / npm ci --workspace web / npm run build -w web"
   },
   "patched_source": {
-    "name": "hermes-agent-0.22.5-fnos.tar.gz",
-    "sha256": "62d7d4b423ca749f08d39571e46e4981ce67a94c8e84e64ea34feab8ff18ba3b",
+    "name": "hermes-agent-0.22.5-fnos-r2.tar.gz",
+    "sha256": "8cc9be261b54081ac0e50ebc158863945af717f0612c04be396da0b3cd5da705",
     "changes": [
       "removed the Android-only psutil git pin",
       "regenerated uv.lock with official PyPI"
     ]
   },
   "fpk": {
-    "revision": "r0",
-    "name": "hermes-agent-0.22.5-fnos-amd64.fpk",
-    "sha256": "9af534abbbe3e6343b811b0327e62a7ffce96062a11d94dff89873da78fb1ec9",
-    "size": 91383742,
-    "app_tgz_md5": "d4ba8745e8ccee82ff300ae11bb1b4e5",
+    "revision": "r2",
+    "name": "hermes-agent-0.22.5.3-fnos-amd64-r2.fpk",
+    "sha256": "9ac7a9cd1484757a8ec2b2a3710bb50f4595927e97e5beed1b68545576371136",
+    "size": 89275531,
+    "app_tgz_md5": "27f92e49383f6ea631bc3db9c443e798",
     "bundled_source": true,
-    "release_url": "https://github.com/CrRinko/FnDepot/releases/tag/hermes-agent-v0.22.5",
-    "download_url": "https://github.com/CrRinko/FnDepot/releases/download/hermes-agent-v0.22.5/hermes-agent-0.22.5-fnos-amd64.fpk"
+    "release_url": "https://github.com/CrRinko/FnDepot/releases/tag/hermes-agent-v0.22.5.3",
+    "download_url": "https://github.com/CrRinko/FnDepot/releases/download/hermes-agent-v0.22.5.3/hermes-agent-0.22.5.3-fnos-amd64-r2.fpk"
   }
 }

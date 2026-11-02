@@ -41,12 +41,16 @@ ensure_runtime() {
 }
 
 ensure_password() {
+    local old_umask
+    old_umask="$(umask)"
     if [ ! -s "${PASSWORD_FILE}" ]; then
         umask 077
-        mkdir -p "$(dirname "${PASSWORD_FILE}")" || return 1
-        head -c 32 /dev/urandom | base64 | tr -d '\n' > "${PASSWORD_FILE}" || return 1
+        mkdir -p "$(dirname "${PASSWORD_FILE}")" || { umask "${old_umask}"; return 1; }
+        head -c 32 /dev/urandom | base64 | tr -d '\n' > "${PASSWORD_FILE}" ||
+            { umask "${old_umask}"; return 1; }
     fi
     chmod 600 "${PASSWORD_FILE}" 2>/dev/null || true
+    umask "${old_umask}"
     return 0
 }
 
@@ -92,6 +96,16 @@ port_in_use() {
     (exec 3<>"/dev/tcp/127.0.0.1/${PORT}") 2>/dev/null
 }
 
+hermes_pid_matches() {
+    local pid="$1" cmdline
+    [ -r "/proc/${pid}/cmdline" ] || return 1
+    cmdline="$(tr '\0' ' ' < "/proc/${pid}/cmdline" 2>/dev/null)" || return 1
+    case "${cmdline}" in
+        *"${HERMES}"*dashboard*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 status_process() {
     local pid
     if [ -r "${PID_FILE}" ]; then
@@ -102,7 +116,7 @@ status_process() {
                 return 1
                 ;;
         esac
-        if kill -0 "${pid}" 2>/dev/null && port_in_use; then
+        if kill -0 "${pid}" 2>/dev/null && hermes_pid_matches "${pid}" && port_in_use; then
             return 0
         fi
         rm -f "${PID_FILE}"
@@ -180,6 +194,11 @@ stop_process() {
     if ! kill -0 "${pid}" 2>/dev/null; then
         rm -f "${PID_FILE}"
         log_msg "not running (stale pid file removed)"
+        return 0
+    fi
+    if ! hermes_pid_matches "${pid}"; then
+        rm -f "${PID_FILE}"
+        log_msg "pid=${pid} is not the Hermes dashboard (stale pid file removed)"
         return 0
     fi
 

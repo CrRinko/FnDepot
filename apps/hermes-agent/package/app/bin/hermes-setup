@@ -141,6 +141,7 @@ read_ready() {
     READY_COMMIT=""
     READY_WEB_DIST_SHA256=""
     READY_PACKAGING_REVISION=""
+    READY_SOURCE_SHA256=""
     if [ -r "${READY_FILE}" ]; then
         while IFS='=' read -r key value; do
             case "${key}" in
@@ -148,14 +149,28 @@ read_ready() {
                 commit) READY_COMMIT="${value}" ;;
                 web_dist_sha256) READY_WEB_DIST_SHA256="${value}" ;;
                 packaging_revision) READY_PACKAGING_REVISION="${value}" ;;
+                source_sha256) READY_SOURCE_SHA256="${value}" ;;
             esac
         done < "${READY_FILE}"
+    fi
+}
+
+bundled_source_hash() {
+    local revision bundled
+    revision="$(read_version_env PACKAGING_REVISION || true)"
+    revision="${revision:-r0}"
+    bundled="${TRIM_APPDEST}/source/hermes-agent-${VERSION}-fnos-${revision}.tar.gz"
+    if [ -f "${bundled}" ]; then
+        sha256_file "${bundled}"
+    else
+        printf '%s' "${SOURCE_SHA256}"
     fi
 }
 
 ready_matches() {
     [ "${READY_VERSION}" = "${VERSION}" ] &&
         [ "${READY_COMMIT}" = "${COMMIT}" ] &&
+        [ "${READY_SOURCE_SHA256}" = "$(bundled_source_hash)" ] &&
         [ -x "${VENV}/bin/hermes" ]
 }
 
@@ -190,29 +205,25 @@ cache_path() {
 }
 
 install_source() {
-    local tarball tmp bundled expected
+    local tarball tmp bundled expected revision
+    revision="$(read_version_env PACKAGING_REVISION || true)"
+    revision="${revision:-r0}"
     tarball="$(cache_path "hermes-agent-${VERSION}.tar.gz")"
-    bundled="${TRIM_APPDEST}/source/hermes-agent-${VERSION}-fnos.tar.gz"
+    bundled="${TRIM_APPDEST}/source/hermes-agent-${VERSION}-fnos-${revision}.tar.gz"
     expected="${PATCHED_SOURCE_SHA256}"
-    if [ "${expected}" = "__PATCHED_SOURCE_SHA256__" ]; then
-        expected="${SOURCE_SHA256}"
-    fi
     tmp="${RUNTIME}/.source.tmp"
     mkdir -p "${RUNTIME}/.cache"
     rm -rf "${tmp}"
     mkdir -p "${tmp}"
-    if [ -f "${bundled}" ]; then
-        if [ "$(sha256_file "${bundled}")" != "${expected}" ]; then
-            fail "bundled source checksum mismatch: ${bundled}"
-        fi
-        log "using bundled source ${bundled}"
-        tarball="${bundled}"
-    elif [ ! -f "${tarball}" ] || [ "$(sha256_file "${tarball}")" != "${SOURCE_SHA256}" ]; then
-        local -a urls
-        mapfile -t urls < <(github_mirrors "${SOURCE_URL}")
-        download_first "${tarball}" "${SOURCE_SHA256}" "${urls[@]}" ||
-            fail "failed to download Hermes source"
+    if [ ! -f "${bundled}" ]; then
+        fail "bundled patched source is missing: ${bundled}"
     fi
+    actual="$(sha256_file "${bundled}")"
+    if [ "${actual}" != "${expected}" ]; then
+        fail "bundled source checksum mismatch: ${bundled} (expected ${expected}, got ${actual})"
+    fi
+    log "using bundled source ${bundled}"
+    tarball="${bundled}"
     tar -xzf "${tarball}" -C "${tmp}" --strip-components=1 ||
         fail "failed to extract Hermes source"
     rm -rf "${SRC}"
@@ -380,20 +391,22 @@ repair_pm() {
 }
 
 write_ready() {
-    local web_hash packaging_revision
+    local web_hash packaging_revision source_hash
     web_hash="$(web_dist_hash)"
+    source_hash="$(bundled_source_hash)"
     packaging_revision="$(read_version_env PACKAGING_REVISION || true)"
     packaging_revision="${packaging_revision:-r0}"
-    printf 'version=%s\ncommit=%s\nweb_dist_sha256=%s\npackaging_revision=%s\ninstalled_at=%s\n' \
-        "${VERSION}" "${COMMIT}" "${web_hash}" "${packaging_revision}" \
-        "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" > "${READY_FILE}"
+    printf 'version=%s\ncommit=%s\nsource_sha256=%s\nweb_dist_sha256=%s\npackaging_revision=%s\ninstalled_at=%s\n' \
+        "${VERSION}" "${COMMIT}" "${source_hash}" "${web_hash}" "${packaging_revision}" \
+        "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" > "${READY_FILE}.tmp"
+    mv -f "${READY_FILE}.tmp" "${READY_FILE}"
 }
 
 fix_permissions() {
     if [ "$(id -u)" -eq 0 ]; then
         if [ -n "${TRIM_USERNAME}" ]; then
             chown -R "${TRIM_USERNAME}:${TRIM_USERNAME}" "${TRIM_PKGHOME}" "${TRIM_PKGVAR}" ||
-                log "warning: chown failed for ${TRIM_USERNAME}"
+                fail "chown to ${TRIM_USERNAME} failed"
         fi
         log "chown=root"
     else
@@ -456,6 +469,7 @@ main() {
     VENV="${RUNTIME}/venv"
     READY_FILE="${RUNTIME}/.ready"
     LOG_FILE="${TRIM_PKGVAR}/install.log"
+    LOCK_FILE="${TRIM_PKGVAR}/setup.lock"
 
     if [ "${check_only}" -eq 1 ]; then
         print_check
@@ -463,6 +477,15 @@ main() {
     fi
 
     mkdir -p "${DATA_DIR}" "${RUNTIME}" "${RUNTIME}/bin" "${RUNTIME}/.cache" "${TRIM_PKGVAR}"
+    if command -v flock >/dev/null 2>&1; then
+        exec 9>"${LOCK_FILE}"
+        if ! flock -w 900 9; then
+            fail "another Hermes setup is already running (lock: ${LOCK_FILE})"
+        fi
+        log "acquired setup lock"
+    else
+        log "WARNING: flock not found; running without a setup lock"
+    fi
     read_ready
     local need_full=0
     if [ "${force}" -eq 1 ] || ! ready_matches; then
@@ -484,12 +507,16 @@ main() {
         log "runtime prepared; venv will be built on first start"
         exit 0
     fi
+    local venv_built=0
     if [ "${need_full}" -eq 1 ] || [ ! -x "${VENV}/bin/hermes" ]; then
         sync_venv
+        venv_built=1
     fi
-    repair_pm
-    write_ready
+    if [ "${need_full}" -eq 1 ] || [ "${venv_built}" -eq 1 ]; then
+        repair_pm
+    fi
     fix_permissions
+    write_ready
     log "runtime ready: ${RUNTIME}"
 }
 

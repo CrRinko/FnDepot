@@ -10,6 +10,9 @@
 cmd/* text eol=lf
 apps/opencode/package/cmd/* text eol=lf
 apps/opencode/package/app/bin/opencode-server text eol=lf
+apps/hermes-agent/package/cmd/* text eol=lf
+apps/hermes-agent/package/app/bin/hermes text eol=lf
+apps/hermes-agent/package/app/bin/hermes-setup text eol=lf
 
 *.png binary
 *.PNG binary

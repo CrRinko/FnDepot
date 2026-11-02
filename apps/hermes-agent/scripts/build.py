@@ -30,6 +30,7 @@ from pathlib import Path
 APP_DIR = Path(__file__).resolve().parent.parent
 PACKAGE_DIR = APP_DIR / "package"
 VERSION_FILE = APP_DIR / "VERSION"
+APP_VERSION_FILE = APP_DIR / "APP_VERSION"
 SOURCE_COMMIT_FILE = APP_DIR / "SOURCE_COMMIT"
 PROVENANCE_FILE = APP_DIR / "provenance.json"
 CACHE_DIR = APP_DIR / ".cache"
@@ -271,6 +272,7 @@ def ensure_fnpack(explicit: Path | None) -> Path:
 
 def stage_package(
     version: str,
+    app_version: str,
     commit: str,
     revision: str,
     web_dist: Path,
@@ -284,7 +286,7 @@ def stage_package(
     manifest_path = stage / "manifest"
     manifest = manifest_path.read_text(encoding="utf-8")
     manifest, count = re.subn(
-        r"(?m)^version\s*=.*$", f"version               = {version}", manifest
+        r"(?m)^version\s*=.*$", f"version               = {app_version}", manifest
     )
     if count != 1:
         raise BuildError("package/manifest must contain exactly one version line")
@@ -293,7 +295,7 @@ def stage_package(
     env_path = stage / "config/bootstrap/version.env"
     env_path.parent.mkdir(parents=True, exist_ok=True)
     env_path.write_text(
-        f"APP_VERSION={version}\n"
+        f"APP_VERSION={app_version}\n"
         f"HERMES_VERSION={version}\n"
         f"SOURCE_COMMIT={commit}\n"
         f"PACKAGING_REVISION={revision}\n",
@@ -318,7 +320,7 @@ def stage_package(
     source_destination.mkdir(parents=True, exist_ok=True)
     shutil.copy2(
         patched_source,
-        source_destination / f"hermes-agent-{version}-fnos.tar.gz",
+        source_destination / f"hermes-agent-{version}-fnos-{revision}.tar.gz",
     )
     setup_script = stage / "app/bin/hermes-setup"
     setup_text = setup_script.read_text(encoding="utf-8")
@@ -366,7 +368,11 @@ def run_fnpack(fnpack: Path, stage: Path, out_dir: Path, version: str, suffix: s
 
 
 def verify_fpk(
-    artifact: Path, version: str, source_sha256: str, patched_source_sha256: str
+    artifact: Path,
+    app_version: str,
+    source_version: str,
+    revision: str,
+    patched_source_sha256: str,
 ) -> dict[str, object]:
     with tarfile.open(artifact, "r:gz") as outer:
         names = outer.getnames()
@@ -380,7 +386,7 @@ def verify_fpk(
         manifest = parse_manifest(manifest_stream.read().decode("utf-8-sig"))
         if manifest.get("appname") != "hermes-agent":
             raise BuildError(f"manifest appname is {manifest.get('appname')!r}")
-        if manifest.get("version") != version:
+        if manifest.get("version") != app_version:
             raise BuildError(f"manifest version is {manifest.get('version')!r}")
         if manifest.get("platform") != "x86":
             raise BuildError(f"manifest platform is {manifest.get('platform')!r}")
@@ -405,13 +411,13 @@ def verify_fpk(
                 "web_dist/index.html",
                 "install-stamp.json",
                 "bin/hermes-setup",
-                f"source/hermes-agent-{version}-fnos.tar.gz",
+                f"source/hermes-agent-{source_version}-fnos-{revision}.tar.gz",
             )
             for name in required:
                 if name not in inner_names:
                     raise BuildError(f"app.tgz is missing {name}")
             source_member = inner.extractfile(
-                f"source/hermes-agent-{version}-fnos.tar.gz"
+                f"source/hermes-agent-{source_version}-fnos-{revision}.tar.gz"
             )
             if source_member is None:
                 raise BuildError("bundled source tarball is not readable")
@@ -464,6 +470,7 @@ def privacy_scan() -> None:
         except (OSError, UnicodeDecodeError):
             continue
         for lineno, line in enumerate(text.splitlines(), 1):
+            line = re.sub(r"\b[0-9a-fA-F]{32,}\b", "", line)
             for match in phone_re.findall(line):
                 raise BuildError(f"privacy scan: phone-like number in {path}:{lineno}: {match}")
             for match in email_re.findall(line):
@@ -475,6 +482,11 @@ def privacy_scan() -> None:
 
 def check_only() -> int:
     version = VERSION_FILE.read_text(encoding="utf-8").strip()
+    app_version = (
+        APP_VERSION_FILE.read_text(encoding="utf-8").strip()
+        if APP_VERSION_FILE.is_file()
+        else version
+    )
     commit = SOURCE_COMMIT_FILE.read_text(encoding="utf-8").strip()
     provenance = json.loads(PROVENANCE_FILE.read_text(encoding="utf-8"))
     manifest = parse_manifest((PACKAGE_DIR / "manifest").read_text(encoding="utf-8"))
@@ -486,15 +498,15 @@ def check_only() -> int:
     )
 
     checks = {
-        "VERSION": version,
-        "manifest version": manifest.get("version"),
-        "version.env APP_VERSION": version_env.get("APP_VERSION"),
-        "install-stamp baseVersion": stamp.get("baseVersion"),
-        "provenance version": provenance.get("version"),
+        "manifest version": (manifest.get("version"), app_version),
+        "version.env APP_VERSION": (version_env.get("APP_VERSION"), app_version),
+        "provenance app_version": (provenance.get("app_version"), app_version),
+        "install-stamp baseVersion": (stamp.get("baseVersion"), version),
+        "provenance upstream version": (provenance.get("version"), version),
     }
-    for label, value in checks.items():
-        if value != version:
-            raise BuildError(f"{label} is {value!r}, expected {version!r}")
+    for label, (value, expected) in checks.items():
+        if value != expected:
+            raise BuildError(f"{label} is {value!r}, expected {expected!r}")
     commit_checks = {
         "SOURCE_COMMIT": commit,
         "install-stamp commit": stamp.get("commit"),
@@ -534,6 +546,11 @@ def check_only() -> int:
 
 def parse_args() -> argparse.Namespace:
     default_version = VERSION_FILE.read_text(encoding="utf-8").strip() if VERSION_FILE.is_file() else ""
+    default_app_version = (
+        APP_VERSION_FILE.read_text(encoding="utf-8").strip()
+        if APP_VERSION_FILE.is_file()
+        else default_version
+    )
     default_commit = (
         SOURCE_COMMIT_FILE.read_text(encoding="utf-8").strip()
         if SOURCE_COMMIT_FILE.is_file()
@@ -543,6 +560,11 @@ def parse_args() -> argparse.Namespace:
         description="Build the Hermes Agent fnOS FPK from the pinned upstream source."
     )
     parser.add_argument("--version", default=default_version, help="upstream version (default: VERSION)")
+    parser.add_argument(
+        "--app-version",
+        default=default_app_version,
+        help="FnDepot/FPK manifest version (default: APP_VERSION)",
+    )
     parser.add_argument("--source-commit", default=default_commit, help="upstream commit")
     parser.add_argument("--source-tarball", type=Path, help="local upstream source tarball")
     parser.add_argument(
@@ -564,8 +586,11 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     version = args.version.strip()
+    app_version = args.app_version.strip()
     if not re.fullmatch(r"[0-9A-Za-z][0-9A-Za-z.+_-]*", version):
         raise BuildError(f"invalid version: {version!r}")
+    if not re.fullmatch(r"[0-9A-Za-z][0-9A-Za-z.+_-]*", app_version):
+        raise BuildError(f"invalid app version: {app_version!r}")
     suffix = args.artifact_suffix.strip()
     if suffix and not re.fullmatch(r"[0-9A-Za-z][0-9A-Za-z._-]*", suffix):
         raise BuildError(f"invalid artifact suffix: {suffix!r}")
@@ -609,6 +634,7 @@ def main() -> int:
     revision = suffix or "r0"
     stage_root, stage = stage_package(
         version,
+        app_version,
         args.source_commit,
         revision,
         web_dist,
@@ -616,9 +642,9 @@ def main() -> int:
         patched_source_digest,
     )
     try:
-        artifact = run_fnpack(fnpack, stage, args.out, version, suffix)
+        artifact = run_fnpack(fnpack, stage, args.out, app_version, suffix)
         verification = verify_fpk(
-            artifact, version, source_digest, patched_source_digest
+            artifact, app_version, version, revision, patched_source_digest
         )
     finally:
         if not args.keep_staging:
@@ -628,7 +654,8 @@ def main() -> int:
 
     summary = {
         "ok": True,
-        "version": version,
+        "version": app_version,
+        "upstream_version": version,
         "artifact": verification,
         "source": {
             "url": provenance["upstream"]["source_url"],

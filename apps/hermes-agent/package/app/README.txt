@@ -12,5 +12,8 @@ Read the password on the NAS as root:
 The dashboard uses a password login page and a signed cookie session.
 Do not expose port 49375 directly to the internet.
 
+The first install builds a Python 3.14 virtualenv and installs the
+dependencies. Expect 30-60 minutes depending on network speed.
+
 Upgrades are delivered by FnDepot / fnOS App Center. The built-in
 `hermes update` command is disabled by install-stamp.json.

@@ -1,6 +1,6 @@
 # 构建 Hermes Agent FPK
 
-本目录保存 Hermes Agent 的 fnOS 包源码与构建脚本。上游源码不直接提交到仓库；构建时下载官方 `v0.22.5` tarball，生成补丁源码，再用固定版本 fnpack 组装 FPK。
+本目录保存 Hermes Agent 的 fnOS 包源码与构建脚本。上游源码不直接提交到仓库；构建时下载官方 `v0.22.5` tarball，生成补丁源码，再用固定版本 fnpack 组装 FPK。应用版本写在 `APP_VERSION`（当前 `0.22.5.3`），上游版本写在 `VERSION`（当前 `0.22.5`）。
 
 ## 环境
 
@@ -28,16 +28,19 @@ python3 scripts/prepare_source.py \
 
 # 3. 构建 FPK（首次会自动构建 web_dist）
 python3 scripts/build.py \
-  --patched-source .cache/hermes-agent-0.22.5-fnos.tar.gz
+  --patched-source .cache/hermes-agent-0.22.5-fnos.tar.gz \
+  --artifact-suffix r2
 ```
 
 输出：
 
 ```text
-dist/hermes-agent-0.22.5-fnos-amd64.fpk
-dist/hermes-agent-0.22.5-fnos-amd64.fpk.sha256
+dist/hermes-agent-0.22.5.3-fnos-amd64-r2.fpk
+dist/hermes-agent-0.22.5.3-fnos-amd64-r2.fpk.sha256
 dist/provenance.generated.json
 ```
+
+`--app-version` 默认读取 `APP_VERSION`；`--artifact-suffix` 同时作为打包修订号（`r2`）写入版本信息和内嵌源码文件名。
 
 ## 离线/复用
 
@@ -46,7 +49,8 @@ python3 scripts/build.py \
   --patched-source .cache/hermes-agent-0.22.5-fnos.tar.gz \
   --source-tarball /tmp/hermes-agent-0.22.5.tar.gz \
   --web-dist .cache/source/hermes-agent-0.22.5/hermes_cli/web_dist \
-  --fnpack /path/to/fnpack
+  --fnpack /path/to/fnpack \
+  --artifact-suffix r2
 ```
 
 - `--web-dist`：复用已构建的官方 dashboard 前端。
@@ -66,11 +70,11 @@ python3 scripts/build.py \
 
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
-gh release create hermes-agent-v0.22.5 \
-  dist/hermes-agent-0.22.5-fnos-amd64.fpk \
-  dist/hermes-agent-0.22.5-fnos-amd64.fpk.sha256 \
-  --title "Hermes Agent 0.22.5" \
-  --notes "Hermes Agent v0.22.5 for fnOS (x86_64)."
+gh release create hermes-agent-v0.22.5.3 \
+  dist/hermes-agent-0.22.5.3-fnos-amd64-r2.fpk \
+  dist/hermes-agent-0.22.5.3-fnos-amd64-r2.fpk.sha256 \
+  --title "Hermes Agent 0.22.5.3" \
+  --notes "Hermes Agent upstream v0.22.5, FnDepot packaging r2, for fnOS (x86_64)."
 ```
 
 然后更新：
@@ -81,8 +85,8 @@ gh release create hermes-agent-v0.22.5 \
 
 ## 版本升级
 
-1. 更新 `VERSION`、`SOURCE_COMMIT`。
-2. 更新 `package/config/bootstrap/version.env`。
+1. 更新 `VERSION`（上游版本）、`APP_VERSION`（应用版本）、`SOURCE_COMMIT`。
+2. 更新 `package/config/bootstrap/version.env`（构建时也会按参数重写）。
 3. 更新 `package/app/install-stamp.json`（`baseVersion`、`commit`、`displayVersion`）。
 4. 更新 `scripts/prepare_source.py`/`build.py` 中固定的上游 URL 与 SHA-256。
 5. 重新生成补丁源码并构建。
@@ -92,14 +96,17 @@ gh release create hermes-agent-v0.22.5 \
 
 上游版本不变、只改打包脚本时：
 
+1. 递增 `APP_VERSION`（例如 `0.22.5.3` → `0.22.5.4`）。fnOS 应用中心以应用版本作为升级键；重复使用同一个应用版本会命中缓存，或被判定为“已安装”而拒绝安装。
+2. 用新的 `--artifact-suffix` 构建，同时递增打包修订号：
+
 ```bash
 python3 scripts/build.py \
   --patched-source .cache/hermes-agent-0.22.5-fnos.tar.gz \
   --web-dist .cache/source/hermes-agent-0.22.5/hermes_cli/web_dist \
-  --artifact-suffix r1
+  --artifact-suffix r3
 ```
 
-上传新的 Release 资产，更新 `fnpack.json` 的 URL/`sha256`/`size`；不要覆盖已发布的同版本资产。
+上传新的 Release 资产，更新 `fnpack.json` 的版本键、URL、`sha256`、`size`；不要覆盖已发布的同版本资产。
 
 ## 内置更新
 

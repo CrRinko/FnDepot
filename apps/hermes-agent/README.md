@@ -6,18 +6,21 @@ Nous Research [Hermes Agent](https://github.com/NousResearch/hermes-agent) v0.22
 
 | 项目 | 值 |
 | --- | --- |
-| 应用版本 | 0.22.5 |
+| 应用版本 | 0.22.5.3（打包修订 r2） |
+| 上游版本 | 0.22.5 |
 | 目标架构 | amd64（manifest `platform=x86`） |
 | 上游仓库 | https://github.com/NousResearch/hermes-agent |
 | 上游 tag | `v0.22.5` |
 | 上游 commit | `bf0203a794a07aac3ff764972ab9087baa4e4f4e` |
 | 上游源码 SHA-256 | `a8f67e5ec14fea681acef6cc7ff1553f002bb6101fd2df22bfdd4b7eecc54eb2` |
-| 补丁源码 SHA-256 | `62d7d4b423ca749f08d39571e46e4981ce67a94c8e84e64ea34feab8ff18ba3b` |
+| 补丁源码 SHA-256 | `8cc9be261b54081ac0e50ebc158863945af717f0612c04be396da0b3cd5da705` |
 | 运行时 | Python 3.14.9、uv 0.13.5 |
-| FPK SHA-256 | `9af534abbbe3e6343b811b0327e62a7ffce96062a11d94dff89873da78fb1ec9` |
-| FPK 大小 | 91,383,742 字节 |
+| FPK SHA-256 | `9ac7a9cd1484757a8ec2b2a3710bb50f4595927e97e5beed1b68545576371136` |
+| FPK 大小 | 89,275,531 字节 |
 
 补丁源码只做两件事：移除上游 `pyproject.toml` 中 Android-only 的 `psutil` git pin，并用官方 PyPI 重新生成 `uv.lock`。Linux 运行时仍使用 `psutil==7.2.2`。
+
+应用版本号 `0.22.5.3` 是 FnDepot 打包版本，上游版本仍是 `0.22.5`。递增应用版本是为了让 fnOS 应用中心能区分同一上游版本的多次打包修订。
 
 ## 安装
 
@@ -26,17 +29,17 @@ Nous Research [Hermes Agent](https://github.com/NousResearch/hermes-agent) v0.22
 安装包直接下载：
 
 ```text
-https://github.com/CrRinko/FnDepot/releases/download/hermes-agent-v0.22.5/hermes-agent-0.22.5-fnos-amd64.fpk
+https://github.com/CrRinko/FnDepot/releases/download/hermes-agent-v0.22.5.3/hermes-agent-0.22.5.3-fnos-amd64-r2.fpk
 ```
 
 校验：
 
 ```bash
-sha256sum hermes-agent-0.22.5-fnos-amd64.fpk
-# 9af534abbbe3e6343b811b0327e62a7ffce96062a11d94dff89873da78fb1ec9
+sha256sum hermes-agent-0.22.5.3-fnos-amd64-r2.fpk
+# 9ac7a9cd1484757a8ec2b2a3710bb50f4595927e97e5beed1b68545576371136
 ```
 
-首次安装会创建 Python 3.14 虚拟环境并安装依赖，通常需要 **10–20 分钟**；安装日志位于 `/vol1/@appdata/hermes-agent/install.log`。
+首次安装会创建 Python 3.14 虚拟环境并安装依赖，通常需要 **30–60 分钟**；安装日志位于 `/vol1/@appdata/hermes-agent/install.log`。从旧版升级时会复用已有运行时，通常只需 1 分钟左右。
 
 ## 登录 Web UI
 
@@ -88,3 +91,5 @@ sudo rm -rf /vol1/@apphome/hermes-agent /vol1/@appdata/hermes-agent
 ## 说明
 
 本包是第三方打包，不是 Nous Research 官方发布。Hermes Agent 上游采用 MIT License；本目录的打包脚本和文档同样采用 MIT License。详见 `NOTICE`。
+
+Hermes 启动时可能在 `dashboard.log` 中输出 `install out of sync (ffmpeg/node/npm/ripgrep ...)`。这是因为本包使用 fnOS 提供的 Node 和系统工具，没有把 Hermes 自带包管理器中的可选工具全部装入运行时；它不影响 dashboard、登录和网关。若需要音视频转码等依赖 `ffmpeg` 的功能，请在 NAS 上另行安装 `ffmpeg`。

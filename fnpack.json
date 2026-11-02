@@ -55,11 +55,11 @@
     },
     "hermes-agent": {
       "display_name": "Hermes Agent",
-      "desc": "Hermes Agent 官方 AI Agent，提供官方 Web Dashboard。首次启动后用户名 hermes，密码随机生成。SSH 登录 NAS 后以 root 权限执行 sudo cat /var/apps/hermes-agent/etc/password 获取密码。首次安装约 10–20 分钟，仅支持 x86 设备。",
+      "desc": "Hermes Agent 官方 AI Agent，提供官方 Web Dashboard。首次启动后用户名 hermes，密码随机生成。SSH 登录 NAS 后以 root 权限执行 sudo cat /var/apps/hermes-agent/etc/password 获取密码。首次安装约 30–60 分钟，仅支持 x86 设备。",
       "i18n": {
         "en-US": {
           "display_name": "Hermes Agent",
-          "desc": "Official Hermes Agent AI assistant with its official web dashboard. Username: hermes. The password is generated on first start; run sudo cat /var/apps/hermes-agent/etc/password as root on the NAS to read it. First install takes about 10-20 minutes. x86 devices only."
+          "desc": "Official Hermes Agent AI assistant with its official web dashboard. Username: hermes. The password is generated on first start; run sudo cat /var/apps/hermes-agent/etc/password as root on the NAS to read it. First install takes about 30-60 minutes. x86 devices only."
         }
       },
       "platform": [
@@ -81,19 +81,19 @@
       "is_docker": false,
       "service_port": "49375",
       "releases": {
-        "0.22.5": {
-          "changelog": "首发：基于上游 Hermes Agent v0.22.5，官方 dashboard，随机密码登录；FPK 内置源码，安装时创建 Python 3.14 运行时；内置更新由 FnDepot/应用中心接管。",
+        "0.22.5.3": {
+          "changelog": "r2：修复源码校验误报，启动时按打包修订校验运行时，避免每次启动重复解包；上游仍为 Hermes Agent v0.22.5。首次安装会创建 Python 3.14 运行时，约需 30–60 分钟。",
           "i18n": {
             "en-US": {
-              "changelog": "Initial release based on upstream Hermes Agent v0.22.5 with the official dashboard, generated password login, bundled source, and an install-time Python 3.14 runtime. Updates are owned by FnDepot/App Center."
+              "changelog": "r2: fixed the bundled-source checksum check and made startup honor the packaging revision, so restarts no longer re-provision the runtime. Upstream is still Hermes Agent v0.22.5. The first install builds a Python 3.14 runtime and takes about 30-60 minutes."
             }
           },
-          "updated_at": "2026-11-01T18:30:00+08:00",
+          "updated_at": "2026-11-03T01:52:00+08:00",
           "packages": {
             "x86": {
-              "download_url": "https://github.com/CrRinko/FnDepot/releases/download/hermes-agent-v0.22.5/hermes-agent-0.22.5-fnos-amd64.fpk",
-              "sha256": "9af534abbbe3e6343b811b0327e62a7ffce96062a11d94dff89873da78fb1ec9",
-              "size": 91383742
+              "download_url": "https://github.com/CrRinko/FnDepot/releases/download/hermes-agent-v0.22.5.3/hermes-agent-0.22.5.3-fnos-amd64-r2.fpk",
+              "sha256": "9ac7a9cd1484757a8ec2b2a3710bb50f4595927e97e5beed1b68545576371136",
+              "size": 89275531
             }
           }
         }
