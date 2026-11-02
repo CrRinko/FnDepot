@@ -40,8 +40,8 @@ Nous Research Hermes Agent 的官方 Web Dashboard，直接运行上游 `hermes 
 - Web UI：`http://<NAS-IP>:49375`，用户名 `hermes`
 - 密码：没有固定默认密码，首次启动时随机生成；SSH 登录 NAS 后以 root 权限执行 `sudo cat /var/apps/hermes-agent/etc/password` 获取
 - 文件：`hermes-agent-0.22.5-fnos-amd64.fpk`
-- 大小：91,383,205 字节
-- SHA-256：`c5c3d33b70ee3430160ec84248f7d97156e12858d31037e4ed9124c34c9d5f9c`
+- 大小：91,383,742 字节
+- SHA-256：`9af534abbbe3e6343b811b0327e62a7ffce96062a11d94dff89873da78fb1ec9`
 - 说明：首次安装约 10–20 分钟；内置更新由 FnDepot/应用中心接管，`hermes update` 会拒绝执行。
 - 使用说明：[apps/hermes-agent/README.md](apps/hermes-agent/README.md)
 

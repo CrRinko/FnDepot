@@ -14,8 +14,8 @@ Nous Research [Hermes Agent](https://github.com/NousResearch/hermes-agent) v0.22
 | 上游源码 SHA-256 | `a8f67e5ec14fea681acef6cc7ff1553f002bb6101fd2df22bfdd4b7eecc54eb2` |
 | 补丁源码 SHA-256 | `62d7d4b423ca749f08d39571e46e4981ce67a94c8e84e64ea34feab8ff18ba3b` |
 | 运行时 | Python 3.14.9、uv 0.13.5 |
-| FPK SHA-256 | `c5c3d33b70ee3430160ec84248f7d97156e12858d31037e4ed9124c34c9d5f9c` |
-| FPK 大小 | 91,383,205 字节 |
+| FPK SHA-256 | `9af534abbbe3e6343b811b0327e62a7ffce96062a11d94dff89873da78fb1ec9` |
+| FPK 大小 | 91,383,742 字节 |
 
 补丁源码只做两件事：移除上游 `pyproject.toml` 中 Android-only 的 `psutil` git pin，并用官方 PyPI 重新生成 `uv.lock`。Linux 运行时仍使用 `psutil==7.2.2`。
 
@@ -33,7 +33,7 @@ https://github.com/CrRinko/FnDepot/releases/download/hermes-agent-v0.22.5/hermes
 
 ```bash
 sha256sum hermes-agent-0.22.5-fnos-amd64.fpk
-# c5c3d33b70ee3430160ec84248f7d97156e12858d31037e4ed9124c34c9d5f9c
+# 9af534abbbe3e6343b811b0327e62a7ffce96062a11d94dff89873da78fb1ec9
 ```
 
 首次安装会创建 Python 3.14 虚拟环境并安装依赖，通常需要 **10–20 分钟**；安装日志位于 `/vol1/@appdata/hermes-agent/install.log`。

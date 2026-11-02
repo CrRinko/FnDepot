@@ -367,6 +367,18 @@ sync_venv() {
     [ -x "${VENV}/bin/hermes" ] || fail "hermes entry point missing after uv sync"
 }
 
+repair_pm() {
+    [ -x "${VENV}/bin/hermes" ] || fail "hermes entry point is missing"
+    log "repairing PM dependency environment"
+    if ! (
+        cd "${SRC}" || exit 1
+        HOME="${DATA_DIR}" HERMES_HOME="${DATA_DIR}" \
+            "${VENV}/bin/hermes" pm repair
+    ) >> "${LOG_FILE}" 2>&1; then
+        fail "hermes pm repair failed: $(tail -n 8 "${LOG_FILE}" | tr '\n' ' ')"
+    fi
+}
+
 write_ready() {
     local web_hash packaging_revision
     web_hash="$(web_dist_hash)"
@@ -475,6 +487,7 @@ main() {
     if [ "${need_full}" -eq 1 ] || [ ! -x "${VENV}/bin/hermes" ]; then
         sync_venv
     fi
+    repair_pm
     write_ready
     fix_permissions
     log "runtime ready: ${RUNTIME}"
