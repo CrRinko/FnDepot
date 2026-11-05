@@ -1,6 +1,6 @@
 {
   "appname": "gitlab",
-  "app_version": "19.5.3.1",
+  "app_version": "19.5.3.2",
   "version": "19.5.3",
   "upstream": {
     "repo": "https://gitlab.com/gitlab-org/gitlab",
@@ -19,12 +19,12 @@
     "owner": "FnDepot"
   },
   "fpk": {
-    "revision": "r1",
-    "name": "gitlab-19.5.3.1-fnos-amd64-r1.fpk",
-    "sha256": "4fce07f9622f5355b7085a40547888bf61312f465066ae200710bc82a61914b8",
-    "size": 38430,
-    "app_tgz_md5": "2e7884ed1954b1186d112b9fe38c0940",
-    "release_url": "https://github.com/CrRinko/FnDepot/releases/tag/gitlab-v19.5.3.1",
-    "download_url": "https://github.com/CrRinko/FnDepot/releases/download/gitlab-v19.5.3.1/gitlab-19.5.3.1-fnos-amd64-r1.fpk"
+    "revision": "r2",
+    "name": "gitlab-19.5.3.2-fnos-amd64-r2.fpk",
+    "sha256": "ba0be65b497d33dfb859c7e5acf7a4b823f218775581cb78792f3cfba36fa56e",
+    "size": 38839,
+    "app_tgz_md5": "7cef5cd76663179fa07c91732e1625bb",
+    "release_url": "https://github.com/CrRinko/FnDepot/releases/tag/gitlab-v19.5.3.2",
+    "download_url": "https://github.com/CrRinko/FnDepot/releases/download/gitlab-v19.5.3.2/gitlab-19.5.3.2-fnos-amd64-r2.fpk"
   }
 }

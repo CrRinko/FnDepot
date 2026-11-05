@@ -18,7 +18,7 @@ https://github.com/CrRinko/FnDepot
 | --- | --- | --- | --- |
 | [OpenCode V2](apps/opencode/README.md) | 2.2.5 | x86 | 编程开发 / AI赋能 |
 | [Hermes Agent](apps/hermes-agent/README.md) | 0.22.5.3 | x86 | AI赋能 / 系统工具 |
-| [GitLab](apps/gitlab/README.md) | 19.5.3.1 | x86 | 编程开发 / 系统工具 |
+| [GitLab](apps/gitlab/README.md) | 19.5.3.2 | x86 | 编程开发 / 系统工具 |
 
 ### OpenCode V2
 
@@ -50,12 +50,12 @@ Nous Research Hermes Agent 的官方 Web Dashboard，直接运行上游 `hermes 
 
 GitLab CE 19.5.3 的 fnOS Docker 应用包，直接运行官方 `gitlab/gitlab-ce:19.5.3-ce.0` 镜像，默认启用 HTTPS，并自动复用 fnOS 证书。
 
-- 安装包：[GitHub Release](https://github.com/CrRinko/FnDepot/releases/tag/gitlab-v19.5.3.1)
+- 安装包：[GitHub Release](https://github.com/CrRinko/FnDepot/releases/tag/gitlab-v19.5.3.2)
 - Web UI：`http://<NAS-IP>:8080` 会自动跳转到 `https://<域名>:8443`，用户名 `root`
 - 密码：首次启动后随机生成；以 root 权限执行 `sudo cat /var/apps/gitlab/var/initial_root_password.txt` 获取
-- 文件：`gitlab-19.5.3.1-fnos-amd64-r1.fpk`
-- 大小：38,430 字节
-- SHA-256：`4fce07f9622f5355b7085a40547888bf61312f465066ae200710bc82a61914b8`
+- 文件：`gitlab-19.5.3.2-fnos-amd64-r2.fpk`
+- 大小：38,839 字节
+- SHA-256：`ba0be65b497d33dfb859c7e5acf7a4b823f218775581cb78792f3cfba36fa56e`
 - 说明：应用设置可修改对外域名、HTTPS 端口、HTTP 跳转端口和 SSH 端口；443 被 fnOS 占用，默认使用 8443。首次启动需拉取约 1.65GB 镜像。
 - 使用说明：[apps/gitlab/README.md](apps/gitlab/README.md)
 

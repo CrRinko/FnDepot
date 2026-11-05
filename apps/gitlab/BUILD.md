@@ -26,21 +26,21 @@ bash tests/run_tests.sh
 
 ```bash
 cd apps/gitlab
-python3 scripts/build.py --artifact-suffix r1 --json
+python3 scripts/build.py --artifact-suffix r2 --json
 ```
 
 输出：
 
 ```text
-dist/gitlab-19.5.3.1-fnos-amd64-r1.fpk
-dist/gitlab-19.5.3.1-fnos-amd64-r1.fpk.sha256
+dist/gitlab-19.5.3.2-fnos-amd64-r2.fpk
+dist/gitlab-19.5.3.2-fnos-amd64-r2.fpk.sha256
 dist/provenance.generated.json
 ```
 
 打包修订（上游版本不变，只改脚本或文档）时递增 `APP_VERSION`，并传入后缀：
 
 ```bash
-python3 scripts/build.py --app-version 19.5.3.2 --artifact-suffix r2 --json
+python3 scripts/build.py --app-version 19.5.3.3 --artifact-suffix r3 --json
 ```
 
 ## 版本与镜像
@@ -75,10 +75,10 @@ apps/gitlab/
 ## 发布
 
 ```bash
-gh release create gitlab-v19.5.3.1 \
-  dist/gitlab-19.5.3.1-fnos-amd64-r1.fpk \
-  dist/gitlab-19.5.3.1-fnos-amd64-r1.fpk.sha256 \
-  --title "GitLab 19.5.3.1" \
+gh release create gitlab-v19.5.3.2 \
+  dist/gitlab-19.5.3.2-fnos-amd64-r2.fpk \
+  dist/gitlab-19.5.3.2-fnos-amd64-r2.fpk.sha256 \
+  --title "GitLab 19.5.3.2" \
   --notes "GitLab CE 19.5.3 for fnOS (x86_64)."
 ```
 

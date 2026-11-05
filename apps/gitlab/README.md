@@ -9,16 +9,16 @@ GitLab CE `19.5.3` 的 fnOS x86_64 Docker 应用包。直接运行官方
 
 | 项目 | 值 |
 | --- | --- |
-| 应用版本 | 19.5.3.1（打包修订 r1） |
+| 应用版本 | 19.5.3.2（打包修订 r2） |
 | 上游版本 | GitLab CE 19.5.3 |
 | 镜像 | `gitlab/gitlab-ce:19.5.3-ce.0` |
 | amd64 摘要 | `sha256:60fc37e470aca439ead4b6e3ed8f578d9e85c954b84b611b5f323a32a9e47615` |
 | 架构 | x86_64 |
-| FPK SHA-256 | `4fce07f9622f5355b7085a40547888bf61312f465066ae200710bc82a61914b8` |
-| FPK 大小 | 38,430 字节 |
+| FPK SHA-256 | `ba0be65b497d33dfb859c7e5acf7a4b823f218775581cb78792f3cfba36fa56e` |
+| FPK 大小 | 38,839 字节 |
 | 最低 fnOS | 1.2.0800 |
 
-打包修订 r1 修复了 HTTPS 证书链：优先复制 fnOS 证书的 fullchain，避免只发送叶子证书导致中间证书缺失。
+打包修订 r2 修复了 HTTPS 证书链（优先 fullchain）、通配符证书自动识别、安装/卸载边界和构建校验；r1 首次修复了证书链。
 
 ## 安装
 
@@ -27,7 +27,7 @@ GitLab CE `19.5.3` 的 fnOS x86_64 Docker 应用包。直接运行官方
 直接下载：
 
 ```text
-https://github.com/CrRinko/FnDepot/releases/download/gitlab-v19.5.3.1/gitlab-19.5.3.1-fnos-amd64-r1.fpk
+https://github.com/CrRinko/FnDepot/releases/download/gitlab-v19.5.3.2/gitlab-19.5.3.2-fnos-amd64-r2.fpk
 ```
 
 首次安装需要从镜像仓库拉取约 1.65GB 的镜像，首次启动还会执行
