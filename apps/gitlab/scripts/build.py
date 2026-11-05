@@ -182,13 +182,10 @@ def check_scripts() -> None:
             if path.is_file() and not os.access(path, os.X_OK):
                 raise BuildError(f"script is not executable: {path}")
             if path.suffix == ".py":
-                result = subprocess.run(
-                    [sys.executable, "-m", "py_compile", str(path)],
-                    capture_output=True,
-                    text=True,
-                )
-                if result.returncode != 0:
-                    raise BuildError(f"python syntax error in {path}: {result.stderr}")
+                try:
+                    compile(path.read_text(encoding="utf-8"), str(path), "exec")
+                except SyntaxError as exc:
+                    raise BuildError(f"python syntax error in {path}: {exc}") from exc
 
 
 def check_only() -> int:
@@ -381,6 +378,8 @@ def stage_package(app_version: str, revision: str) -> Path:
     root = Path(tempfile.mkdtemp(prefix="gitlab-fpk-stage-"))
     stage = root / "stage"
     shutil.copytree(PACKAGE_DIR, stage)
+    for cache in stage.rglob("__pycache__"):
+        shutil.rmtree(cache, ignore_errors=True)
     manifest_path = stage / "manifest"
     text = manifest_path.read_text(encoding="utf-8")
     text, count = re.subn(r"(?m)^version\s*=.*$", f"version               = {app_version}", text)
