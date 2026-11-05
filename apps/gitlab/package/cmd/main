@@ -1,3 +1,133 @@
 #!/bin/bash
-# placeholder; implemented in Task 4
-exit 0
+# GitLab dashboard/container lifecycle for fnOS.
+
+set -u
+
+APP="${TRIM_APPDEST:-}"
+VAR="${TRIM_PKGVAR:-}"
+COMPOSE="${APP}/docker/docker-compose.yaml"
+LOG="${VAR}/control.log"
+
+log_msg() {
+    [ -n "${VAR}" ] || return 0
+    printf '%s - %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >>"${LOG}" 2>/dev/null || true
+}
+
+temp_log() {
+    if [ -n "${TRIM_TEMP_LOGFILE:-}" ]; then
+        printf '%s\n' "$*" >"${TRIM_TEMP_LOGFILE}" 2>/dev/null || true
+    fi
+}
+
+require_env() {
+    [ -n "${APP}" ] && [ -n "${VAR}" ] && [ -x "${APP}/bin/sync_config.py" ] || {
+        temp_log "GitLab 应用目录不完整"
+        return 1
+    }
+}
+
+fix_perms() {
+    [ "$(id -u)" -eq 0 ] || return 0
+    local owner="${TRIM_USERNAME:-docker-gitlab}"
+    mkdir -p "${VAR}/config/ssl" 2>/dev/null || true
+    chown -R "${owner}:${owner}" "${VAR}/config" 2>/dev/null || true
+    for file in "${VAR}/settings.env" "${VAR}/cert-source.json"; do
+        [ -f "${file}" ] && chown "${owner}:${owner}" "${file}" 2>/dev/null || true
+    done
+    return 0
+}
+
+compose() {
+    command -v docker >/dev/null 2>&1 || {
+        temp_log "Docker 不可用"
+        return 1
+    }
+    docker compose -p gitlab -f "${COMPOSE}" "$@"
+}
+
+container_running() {
+    command -v docker >/dev/null 2>&1 || return 1
+    [ "$(docker inspect -f '{{.State.Running}}' gitlab 2>/dev/null || true)" = "true" ]
+}
+
+sync_config() {
+    local output key value
+    output="$(python3 "${APP}/bin/sync_config.py" --mode runtime 2>>"${VAR}/runtime.log")" || return 1
+    RESOLVED_DOMAIN=""
+    CONFIG_CHANGED="0"
+    CERT_CHANGED="0"
+    HTTPS_PORT="8443"
+    HTTP_PORT="8080"
+    SSH_PORT="2224"
+    TIME_ZONE="Asia/Shanghai"
+    while IFS='=' read -r key value; do
+        case "${key}" in
+            RESOLVED_DOMAIN) RESOLVED_DOMAIN="${value}" ;;
+            CONFIG_CHANGED) CONFIG_CHANGED="${value}" ;;
+            CERT_CHANGED) CERT_CHANGED="${value}" ;;
+            HTTPS_PORT) HTTPS_PORT="${value}" ;;
+            HTTP_PORT) HTTP_PORT="${value}" ;;
+            SSH_PORT) SSH_PORT="${value}" ;;
+            TIME_ZONE) TIME_ZONE="${value}" ;;
+        esac
+    done <<<"${output}"
+    export HTTPS_PORT HTTP_PORT SSH_PORT TIME_ZONE
+    log_msg "synced domain=${RESOLVED_DOMAIN} config_changed=${CONFIG_CHANGED} cert_changed=${CERT_CHANGED}"
+    return 0
+}
+
+copy_root_password() {
+    local source="${VAR}/config/initial_root_password" target="${VAR}/initial_root_password.txt"
+    if [ -f "${source}" ] && [ ! -f "${target}" ]; then
+        cp -f "${source}" "${target}" 2>/dev/null || return 0
+        chmod 600 "${target}" 2>/dev/null || true
+        log_msg "saved initial root password"
+    fi
+}
+
+start_process() {
+    require_env || return 1
+    fix_perms
+    sync_config || { temp_log "GitLab 配置同步失败，详见 ${VAR}/runtime.log"; return 1; }
+    compose up -d >>"${LOG}" 2>&1 || { temp_log "GitLab 容器启动失败"; return 1; }
+    copy_root_password
+    log_msg "started"
+    return 0
+}
+
+stop_process() {
+    require_env || return 1
+    compose stop >>"${LOG}" 2>&1 || true
+    log_msg "stopped"
+    return 0
+}
+
+status_process() {
+    local was_running=0
+    require_env || return 3
+    fix_perms
+    sync_config || return 1
+    container_running && was_running=1
+    compose up -d >>"${LOG}" 2>&1 || { temp_log "GitLab 容器启动失败"; return 1; }
+    if [ "${was_running}" = "1" ] && [ "${CONFIG_CHANGED}" = "1" ]; then
+        docker restart gitlab >>"${LOG}" 2>&1 || true
+        log_msg "restarted for config change"
+    elif [ "${was_running}" = "1" ] && [ "${CERT_CHANGED}" = "1" ]; then
+        docker exec gitlab gitlab-ctl hup nginx >>"${LOG}" 2>&1 || true
+        log_msg "reloaded nginx for certificate change"
+    fi
+    copy_root_password
+    if container_running; then
+        return 0
+    fi
+    return 3
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    case "${1:-}" in
+        start) start_process ;;
+        stop) stop_process ;;
+        status) status_process ;;
+        *) exit 1 ;;
+    esac
+fi

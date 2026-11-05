@@ -1,3 +1,6 @@
 #!/bin/bash
-# placeholder; implemented in Task 4
+set -u
+if [ -n "${TRIM_APPDEST:-}" ] && command -v docker >/dev/null 2>&1; then
+    docker compose -p gitlab -f "${TRIM_APPDEST}/docker/docker-compose.yaml" stop >/dev/null 2>&1 || true
+fi
 exit 0

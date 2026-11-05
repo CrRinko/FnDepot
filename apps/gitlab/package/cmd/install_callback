@@ -1,3 +1,31 @@
 #!/bin/bash
-# placeholder; implemented in Task 4
+set -u
+
+temp_log() {
+    if [ -n "${TRIM_TEMP_LOGFILE:-}" ]; then
+        printf '%s\n' "$*" >"${TRIM_TEMP_LOGFILE}" 2>/dev/null || true
+    else
+        printf '%s\n' "$*" >&2
+    fi
+}
+
+if [ -z "${TRIM_PKGVAR:-}" ] || [ -z "${TRIM_APPDEST:-}" ]; then
+    temp_log "GitLab 安装参数不完整"
+    exit 1
+fi
+mkdir -p "${TRIM_PKGVAR}" 2>/dev/null || true
+python3 "${TRIM_APPDEST}/bin/sync_config.py" --mode install >>"${TRIM_PKGVAR}/install.log" 2>&1
+rc=$?
+if [ "${rc}" -eq 2 ]; then
+    temp_log "GitLab 配置无效，请检查域名和端口"
+    exit 2
+fi
+if [ "${rc}" -ne 0 ]; then
+    if [ ! -w "${TRIM_PKGVAR}" ]; then
+        temp_log "GitLab 配置将在首次启动时由系统修复"
+        exit 0
+    fi
+    temp_log "GitLab 配置初始化失败，详见 ${TRIM_PKGVAR}/install.log"
+    exit 1
+fi
 exit 0

@@ -1,3 +1,6 @@
 #!/bin/bash
-# placeholder; implemented in Task 4
+set -u
+if [ -n "${TRIM_PKGVAR:-}" ] && [ -n "${TRIM_APPDEST:-}" ]; then
+    python3 "${TRIM_APPDEST}/bin/sync_config.py" --mode upgrade >>"${TRIM_PKGVAR}/install.log" 2>&1 || true
+fi
 exit 0

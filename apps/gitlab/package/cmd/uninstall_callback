@@ -1,3 +1,22 @@
 #!/bin/bash
-# placeholder; implemented in Task 4
+set -u
+
+delete_contents() {
+    local dir="$1" left
+    [ -n "${dir}" ] || return 0
+    [ -d "${dir}" ] || return 0
+    rm -rf "${dir}"/* "${dir}"/.[!.]* 2>/dev/null || true
+    left="$(ls -A "${dir}" 2>/dev/null | wc -l | tr -d ' ')"
+    if [ "${left:-0}" != "0" ]; then
+        printf 'RESIDUAL_COUNT=%s in %s\n' "${left}" "${dir}"
+        return 1
+    fi
+    return 0
+}
+
+if [ "${wizard_data_action:-keep}" = "delete" ]; then
+    if [ -n "${TRIM_PKGVAR:-}" ]; then
+        delete_contents "${TRIM_PKGVAR}" || true
+    fi
+fi
 exit 0
