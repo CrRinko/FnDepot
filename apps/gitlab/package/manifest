@@ -1,5 +1,5 @@
 appname               = gitlab
-version               = 19.5.3
+version               = 19.5.3.1
 display_name          = GitLab
 desc                  = GitLab 官方代码托管与 DevOps 平台，使用官方 Docker 镜像，支持自定义访问域名和 HTTPS。首次启动需要拉取约 1.65GB 镜像。
 platform              = x86

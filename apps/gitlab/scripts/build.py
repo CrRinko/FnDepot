@@ -198,8 +198,10 @@ def check_only() -> int:
     resource = json.loads((PACKAGE_DIR / "config/resource").read_text(encoding="utf-8"))
     ui = json.loads((PACKAGE_DIR / "app/ui/config").read_text(encoding="utf-8"))
 
-    if version != "19.5.3" or app_version != "19.5.3":
-        raise BuildError(f"VERSION/APP_VERSION must be 19.5.3, got {version}/{app_version}")
+    if version != "19.5.3":
+        raise BuildError(f"VERSION must be 19.5.3, got {version!r}")
+    if app_version != version and not app_version.startswith(version + "."):
+        raise BuildError(f"APP_VERSION {app_version!r} does not match upstream {version!r}")
     if provenance.get("app_version") != app_version or provenance.get("version") != version:
         raise BuildError("provenance.json versions do not match VERSION/APP_VERSION")
     expected_manifest = {

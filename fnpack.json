@@ -98,6 +98,52 @@
           }
         }
       }
+    },
+    "gitlab": {
+      "display_name": "GitLab",
+      "desc": "GitLab 官方代码托管与 DevOps 平台，使用官方 Docker 镜像。默认启用 HTTPS 并自动复用 fnOS 证书；首次启动需拉取约 1.65GB 镜像。仅支持 x86 设备。",
+      "i18n": {
+        "en-US": {
+          "display_name": "GitLab",
+          "desc": "Official GitLab code hosting and DevOps platform using the official Docker image. HTTPS is enabled by default and reuses fnOS certificates. The first start pulls about 1.65 GB. x86 devices only."
+        }
+      },
+      "platform": [
+        "x86"
+      ],
+      "categories": [
+        "编程开发",
+        "系统工具"
+      ],
+      "icon_url": "apps/gitlab/icon-256.png",
+      "readme_url": "apps/gitlab/README.md",
+      "bug_report_url": "https://github.com/CrRinko/FnDepot/issues",
+      "maintainer": "CrRinko",
+      "maintainer_url": "https://github.com/CrRinko",
+      "distributor": "CrRinko",
+      "distributor_url": "https://github.com/CrRinko",
+      "run_as": "package",
+      "install_type": "",
+      "is_docker": true,
+      "service_port": "8443",
+      "releases": {
+        "19.5.3.1": {
+          "changelog": "首发：基于 GitLab CE 19.5.3，官方 Docker 镜像，默认 HTTPS，自动复用 fnOS 证书；应用设置可修改域名和端口。r1 修复 HTTPS 证书链，优先使用 fullchain。",
+          "i18n": {
+            "en-US": {
+              "changelog": "Initial release based on GitLab CE 19.5.3 with the official Docker image, HTTPS by default, and fnOS certificate reuse. The domain and ports are editable in app settings. r1 fixes the HTTPS chain by preferring the fullchain."
+            }
+          },
+          "updated_at": "2026-11-05T17:30:00+08:00",
+          "packages": {
+            "x86": {
+              "download_url": "https://github.com/CrRinko/FnDepot/releases/download/gitlab-v19.5.3.1/gitlab-19.5.3.1-fnos-amd64-r1.fpk",
+              "sha256": "4fce07f9622f5355b7085a40547888bf61312f465066ae200710bc82a61914b8",
+              "size": 38430
+            }
+          }
+        }
+      }
     }
   }
 }
