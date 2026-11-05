@@ -100,6 +100,7 @@ def select_certificate(
         if _valid_to(entry) <= now_ms:
             continue
         cert = str(entry.get("certificate") or "").strip()
+        fullchain = str(entry.get("fullchain") or "").strip()
         key = str(entry.get("privateKey") or "").strip()
         if not cert or not key:
             continue
@@ -124,7 +125,7 @@ def select_certificate(
     return CertChoice(
         domain=domain,
         san=_sans(entry),
-        cert_path=Path(str(entry.get("certificate")).strip()),
+        cert_path=Path(fullchain or cert),
         key_path=Path(str(entry.get("privateKey")).strip()),
         valid_to=_valid_to(entry),
         used=bool(entry.get("used")),

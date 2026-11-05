@@ -94,6 +94,27 @@ class SelectCertificateTests(unittest.TestCase):
             select_cert.select_certificate(entries, "a.b.example.com", now=self.now_ms / 1000)
         )
 
+    def test_fullchain_is_preferred_over_leaf(self):
+        crt, key = self.cert("le", "DNS:le.example.com")
+        fullchain = self.root / "fullchain.crt"
+        fullchain.write_bytes(crt.read_bytes())
+        entries = [
+            entry(
+                "le.example.com",
+                ["le.example.com"],
+                crt,
+                key,
+                self.future,
+                used=True,
+                fullchain=fullchain,
+            )
+        ]
+        choice = select_cert.select_certificate(
+            entries, "le.example.com", now=self.now_ms / 1000
+        )
+        self.assertIsNotNone(choice)
+        self.assertEqual(choice.cert_path, fullchain)
+
     def test_expired_is_skipped(self):
         crt, key = self.cert("old", "DNS:old.example.com")
         entries = [entry("old.example.com", ["old.example.com"], crt, key, self.past)]
