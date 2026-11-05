@@ -234,10 +234,52 @@ def check_only() -> int:
         raise BuildError("app/ui/config must use ${HTTP_PORT} over http for the redirect entry")
 
     check_scripts()
+    wizards = {}
     for wizard in ("install", "config", "uninstall"):
         path = PACKAGE_DIR / "wizard" / wizard
         require_file(path)
-        json.loads(path.read_text(encoding="utf-8"))
+        wizards[wizard] = json.loads(path.read_text(encoding="utf-8"))
+
+    def wizard_fields(doc):
+        result = {}
+        for step in doc:
+            for item in step.get("items", []):
+                if "field" in item:
+                    result[item["field"]] = item
+        return result
+
+    required_fields = {"GITLAB_DOMAIN", "HTTPS_PORT", "HTTP_PORT", "SSH_PORT", "TIME_ZONE"}
+    for wizard in ("install", "config"):
+        fields = wizard_fields(wizards[wizard])
+        if set(fields) != required_fields:
+            raise BuildError(f"wizard/{wizard} fields are {sorted(fields)}")
+        defaults = {
+            "GITLAB_DOMAIN": "",
+            "HTTPS_PORT": "8443",
+            "HTTP_PORT": "8080",
+            "SSH_PORT": "2224",
+            "TIME_ZONE": "Asia/Shanghai",
+        }
+        for name, expected in defaults.items():
+            if str(fields[name].get("initValue", "")) != expected:
+                raise BuildError(f"wizard/{wizard} {name} default must be {expected!r}")
+        for name in ("HTTPS_PORT", "HTTP_PORT", "SSH_PORT"):
+            rules = fields[name].get("rules") or []
+            if not any("pattern" in rule for rule in rules):
+                raise BuildError(f"wizard/{wizard} {name} must validate the port pattern")
+        if not any(
+            item.get("type") == "tips"
+            for step in wizards[wizard]
+            for item in step.get("items", [])
+        ):
+            raise BuildError(f"wizard/{wizard} must include a certificate tips item")
+    uninstall_fields = wizard_fields(wizards["uninstall"])
+    action = uninstall_fields.get("wizard_data_action")
+    if not action:
+        raise BuildError("wizard/uninstall must define wizard_data_action")
+    values = {option.get("value") for option in action.get("options", [])}
+    if values != {"keep", "delete"}:
+        raise BuildError("wizard/uninstall data action must offer keep and delete")
 
     icons = {
         APP_DIR / "icon-64.png": 64,

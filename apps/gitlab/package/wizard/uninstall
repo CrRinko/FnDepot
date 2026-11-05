@@ -1,1 +1,24 @@
-[]
+[
+  {
+    "stepTitle": "卸载选项",
+    "items": [
+      {
+        "type": "select",
+        "field": "wizard_data_action",
+        "label": "应用数据",
+        "initValue": "keep",
+        "helpText": "保留后重新安装可继续使用仓库和用户数据；删除会清空 GitLab 数据。",
+        "options": [
+          {
+            "label": "保留数据",
+            "value": "keep"
+          },
+          {
+            "label": "删除数据",
+            "value": "delete"
+          }
+        ]
+      }
+    ]
+  }
+]

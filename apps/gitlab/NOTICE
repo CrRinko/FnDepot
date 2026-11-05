@@ -1,0 +1,15 @@
+GitLab for fnOS
+================
+
+This is an unofficial community package for running GitLab CE on fnOS.
+
+GitLab is a trademark of GitLab Inc. This project is not affiliated with,
+endorsed by, or sponsored by GitLab Inc.
+
+The packaging scripts, lifecycle scripts, and documentation in this
+directory are licensed under the MIT License.
+
+GitLab CE is distributed under the MIT License. See the upstream project:
+https://gitlab.com/gitlab-org/gitlab
+
+The GitLab tanuki logo is used only to identify the packaged application.
