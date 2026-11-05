@@ -1,0 +1,19 @@
+name: gitlab
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:19.5.3-ce.0
+    container_name: gitlab
+    restart: unless-stopped
+    hostname: gitlab
+    shm_size: "256m"
+    mem_limit: 8g
+    environment:
+      TZ: ${TIME_ZONE:-Asia/Shanghai}
+    ports:
+      - "${HTTPS_PORT:-8443}:${HTTPS_PORT:-8443}"
+      - "${HTTP_PORT:-8080}:80"
+      - "${SSH_PORT:-2224}:22"
+    volumes:
+      - "${TRIM_PKGVAR}/config:/etc/gitlab"
+      - "${TRIM_PKGVAR}/logs:/var/log/gitlab"
+      - "${TRIM_PKGVAR}/data:/var/opt/gitlab"

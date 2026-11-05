@@ -1,0 +1,6 @@
+{
+  "defaults": {"run-as": "package"},
+  "username": "docker-gitlab",
+  "groupname": "docker-gitlab",
+  "join-groups": ["docker"]
+}

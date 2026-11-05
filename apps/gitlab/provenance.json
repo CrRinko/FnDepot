@@ -1,0 +1,23 @@
+{
+  "appname": "gitlab",
+  "app_version": "19.5.3",
+  "version": "19.5.3",
+  "upstream": {
+    "repo": "https://gitlab.com/gitlab-org/gitlab",
+    "tag": "v19.5.3",
+    "version": "19.5.3",
+    "license": "MIT"
+  },
+  "image": {
+    "name": "gitlab/gitlab-ce",
+    "tag": "19.5.3-ce.0",
+    "digest": "sha256:60fc37e470aca439ead4b6e3ed8f578d9e85c954b84b611b5f323a32a9e47615"
+  },
+  "update": {"mechanism": "external", "distribution": "fnos", "owner": "FnDepot"},
+  "fpk": {
+    "revision": "r0",
+    "name": "gitlab-19.5.3-fnos-amd64.fpk",
+    "sha256": "",
+    "size": 0
+  }
+}
