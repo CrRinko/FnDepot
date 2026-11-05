@@ -112,7 +112,7 @@ def select_certificate(
             usable.append((rank, 0 if used else 1, -_valid_to(entry), entry))
         else:
             domain = str(entry.get("domain") or "").strip()
-            if not domain or domain.lower() == "fnos":
+            if not domain or domain.lower() == "fnos" or "*" in domain:
                 continue
             usable.append((0, 0 if used else 1, -_valid_to(entry), entry))
     if not usable:
@@ -135,7 +135,12 @@ def select_certificate(
 def resolve_domain(requested_domain: str, choice: CertChoice | None, primary_ip: str) -> str:
     if requested_domain:
         return requested_domain.strip().rstrip(".")
-    if choice is not None and choice.domain and choice.domain.lower() != "fnos":
+    if (
+        choice is not None
+        and choice.domain
+        and choice.domain.lower() != "fnos"
+        and "*" not in choice.domain
+    ):
         return choice.domain.strip().rstrip(".")
     return primary_ip
 

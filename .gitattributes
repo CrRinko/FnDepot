@@ -17,3 +17,6 @@ apps/hermes-agent/package/app/bin/hermes-setup text eol=lf
 *.png binary
 *.PNG binary
 *.fpk binary
+apps/gitlab/package/cmd/* text eol=lf
+apps/gitlab/package/app/bin/*.py text eol=lf
+apps/gitlab/tests/*.sh text eol=lf

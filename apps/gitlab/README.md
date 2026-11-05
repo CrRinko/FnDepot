@@ -72,7 +72,8 @@ https://<对外域名>:8443
 - 初始密码：首次启动后由 GitLab 生成，应用会复制到：
 
 ```text
-/vol1/@appdata/gitlab/initial_root_password.txt
+/var/apps/gitlab/var/initial_root_password.txt
+# 实际路径：/vol1/@appdata/gitlab/initial_root_password.txt
 ```
 
 也可以查看 GitLab 容器内的 `/etc/gitlab/initial_root_password`。该初始密码只应使用一次，

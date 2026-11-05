@@ -115,6 +115,24 @@ class SelectCertificateTests(unittest.TestCase):
         self.assertIsNotNone(choice)
         self.assertEqual(choice.cert_path, fullchain)
 
+    def test_wildcard_only_store_is_not_used_as_external_domain(self):
+        crt, key = self.cert("wild", "DNS:*.example.com")
+        entries = [
+            entry("*.example.com", ["*.example.com"], crt, key, self.future, used=True)
+        ]
+        self.assertIsNone(
+            select_cert.select_certificate(entries, "", now=self.now_ms / 1000)
+        )
+        store = self.root / "wild.json"
+        store.write_text(json.dumps(entries), encoding="utf-8")
+        dest = self.root / "dest"
+        state = self.root / "cert-source.json"
+        result = select_cert.sync_from_store(
+            store, "", dest, state, primary_ip="192.0.2.10"
+        )
+        self.assertEqual(result.source, "self-signed")
+        self.assertEqual(result.domain, "192.0.2.10")
+
     def test_expired_is_skipped(self):
         crt, key = self.cert("old", "DNS:old.example.com")
         entries = [entry("old.example.com", ["old.example.com"], crt, key, self.past)]

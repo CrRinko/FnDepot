@@ -30,8 +30,8 @@ fix_perms() {
     [ "$(id -u)" -eq 0 ] || return 0
     local owner="${TRIM_USERNAME:-docker-gitlab}"
     mkdir -p "${VAR}/config/ssl" 2>/dev/null || true
-    chown -R "${owner}:${owner}" "${VAR}/config" 2>/dev/null || true
-    for file in "${VAR}/settings.env" "${VAR}/cert-source.json"; do
+    chown -R "${owner}:${owner}" "${VAR}/config/ssl" 2>/dev/null || true
+    for file in "${VAR}/config/gitlab.rb" "${VAR}/settings.env" "${VAR}/cert-source.json"; do
         [ -f "${file}" ] && chown "${owner}:${owner}" "${file}" 2>/dev/null || true
     done
     return 0
@@ -97,7 +97,10 @@ start_process() {
 
 stop_process() {
     require_env || return 1
-    compose stop >>"${LOG}" 2>&1 || true
+    if ! compose stop >>"${LOG}" 2>&1; then
+        temp_log "GitLab 容器停止失败"
+        return 1
+    fi
     log_msg "stopped"
     return 0
 }

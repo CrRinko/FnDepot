@@ -9,6 +9,14 @@ temp_log() {
     fi
 }
 
+writable_var() {
+    [ -w "${TRIM_PKGVAR}" ] || return 1
+    if [ -d "${TRIM_PKGVAR}/config" ] && [ ! -w "${TRIM_PKGVAR}/config" ]; then
+        return 1
+    fi
+    return 0
+}
+
 if [ -z "${TRIM_PKGVAR:-}" ] || [ -z "${TRIM_APPDEST:-}" ]; then
     temp_log "GitLab 配置参数不完整"
     exit 1

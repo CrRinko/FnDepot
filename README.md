@@ -51,7 +51,7 @@ Nous Research Hermes Agent 的官方 Web Dashboard，直接运行上游 `hermes 
 GitLab CE 19.5.3 的 fnOS Docker 应用包，直接运行官方 `gitlab/gitlab-ce:19.5.3-ce.0` 镜像，默认启用 HTTPS，并自动复用 fnOS 证书。
 
 - 安装包：[GitHub Release](https://github.com/CrRinko/FnDepot/releases/tag/gitlab-v19.5.3.1)
-- Web UI：`https://<NAS-IP或域名>:8443`，用户名 `root`
+- Web UI：`http://<NAS-IP>:8080` 会自动跳转到 `https://<域名>:8443`，用户名 `root`
 - 密码：首次启动后随机生成；以 root 权限执行 `sudo cat /var/apps/gitlab/var/initial_root_password.txt` 获取
 - 文件：`gitlab-19.5.3.1-fnos-amd64-r1.fpk`
 - 大小：38,430 字节

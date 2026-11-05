@@ -62,6 +62,14 @@ test -f "$VAR/config/ssl/gitlab.key"
 grep -q "external_url 'https://gitlab.example.com:18443'" "$VAR/config/gitlab.rb"
 grep -q 'GITLAB_DOMAIN=gitlab.example.com' "$VAR/settings.env"
 
+chmod 555 "$VAR/config"
+if ! HTTPS_PORT=18444 "$CMD/install_callback"; then
+    echo "install_callback should tolerate a read-only config directory" >&2
+    exit 1
+fi
+chmod 755 "$VAR/config"
+test -f "$VAR/settings.env"
+
 before="$(sha256sum "$VAR/settings.env" | awk '{print $1}')"
 if HTTPS_PORT=443 "$CMD/config_callback"; then
     echo "config_callback unexpectedly accepted port 443" >&2
@@ -76,5 +84,16 @@ test -f "$VAR/keep-data"
 touch "$VAR/delete-data"
 wizard_data_action=delete "$CMD/uninstall_callback"
 test ! -f "$VAR/delete-data"
+
+mkdir -p "$VAR/locked/sub"
+touch "$VAR/locked/sub/file"
+chmod 555 "$VAR/locked/sub"
+if wizard_data_action=delete "$CMD/uninstall_callback"; then
+    echo "uninstall_callback should fail when root-owned data cannot be removed" >&2
+    exit 1
+fi
+test -f "$VAR/locked/sub/file"
+chmod 755 "$VAR/locked/sub"
+rm -rf "$VAR/locked"
 
 echo "lifecycle tests ok"

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import socket
 import sys
 import tempfile
 import time
@@ -125,6 +126,34 @@ class SyncConfigTests(unittest.TestCase):
         result = self.run_sync("runtime", env=env)
         self.assertFalse(result.cert_changed)
         self.assertEqual(result.resolved_domain, "gitlab.example.com")
+
+    def test_fresh_install_skips_self_occupied_port_check(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.bind(("127.0.0.1", 0))
+        port = sock.getsockname()[1]
+        sock.listen(1)
+        try:
+            env = dict(self.env, HTTPS_PORT=str(port))
+            result = self.run_sync("install", env=env)
+            self.assertEqual(result.settings.https_port, port)
+        finally:
+            sock.close()
+
+    def test_runtime_non_integer_port_falls_back(self):
+        self.run_sync("install")
+        result = self.run_sync("runtime", env=dict(self.env, HTTPS_PORT="abc"))
+        self.assertEqual(result.settings.https_port, 8443)
+
+    def test_write_failure_raises_sync_error_code_1(self):
+        config_dir = self.var / "config"
+        config_dir.mkdir()
+        config_dir.chmod(0o555)
+        try:
+            with self.assertRaises(sync_config.SyncError) as ctx:
+                self.run_sync("install")
+            self.assertEqual(ctx.exception.code, 1)
+        finally:
+            config_dir.chmod(0o755)
 
     def test_runtime_without_env_or_settings_uses_defaults(self):
         result = self.run_sync("runtime", env={})

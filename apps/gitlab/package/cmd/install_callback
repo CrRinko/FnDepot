@@ -9,6 +9,14 @@ temp_log() {
     fi
 }
 
+writable_var() {
+    [ -w "${TRIM_PKGVAR}" ] || return 1
+    if [ -d "${TRIM_PKGVAR}/config" ] && [ ! -w "${TRIM_PKGVAR}/config" ]; then
+        return 1
+    fi
+    return 0
+}
+
 if [ -z "${TRIM_PKGVAR:-}" ] || [ -z "${TRIM_APPDEST:-}" ]; then
     temp_log "GitLab 安装参数不完整"
     exit 1
@@ -21,7 +29,7 @@ if [ "${rc}" -eq 2 ]; then
     exit 2
 fi
 if [ "${rc}" -ne 0 ]; then
-    if [ ! -w "${TRIM_PKGVAR}" ]; then
+    if ! writable_var; then
         temp_log "GitLab 配置将在首次启动时由系统修复"
         exit 0
     fi

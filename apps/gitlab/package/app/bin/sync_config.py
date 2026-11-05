@@ -94,42 +94,65 @@ def run(
     settings_path = base / "settings.env"
     previous = gitlab_config.load_settings(settings_path)
     env_has_values = any(key in env for key in ("HTTPS_PORT", "HTTP_PORT", "SSH_PORT"))
-    candidate = _settings_from_env(env)
-    if not env_has_values and previous is not None:
+
+    def runtime_fallback() -> gitlab_config.Settings:
+        for fallback in (previous, DEFAULT_SETTINGS):
+            if fallback is None:
+                continue
+            try:
+                _validate_or_raise(fallback, None, check_ports=False)
+                return fallback
+            except SyncError:
+                continue
+        return DEFAULT_SETTINGS
+
+    parse_failed = False
+    try:
+        candidate = _settings_from_env(env)
+    except SyncError:
+        if mode != "runtime":
+            raise
+        parse_failed = True
+        candidate = runtime_fallback()
+    if not env_has_values and previous is not None and not parse_failed:
         candidate = previous
+    if parse_failed:
+        _validate_or_raise(candidate, None, check_ports=False)
+    else:
+        check_ports = not (mode == "install" and previous is None)
+        try:
+            _validate_or_raise(candidate, previous, check_ports=check_ports)
+        except SyncError:
+            if mode != "runtime":
+                raise
+            candidate = runtime_fallback()
+            _validate_or_raise(candidate, None, check_ports=False)
 
     try:
-        _validate_or_raise(candidate, previous, check_ports=True)
-    except SyncError:
-        if mode == "runtime" and previous is not None:
-            candidate = previous
-            _validate_or_raise(candidate, None, check_ports=False)
-        elif mode == "runtime":
-            candidate = DEFAULT_SETTINGS
-            _validate_or_raise(candidate, None, check_ports=False)
-        else:
-            raise
-
-    store_path = Path(store or env.get("GITLAB_CERT_STORE") or DEFAULT_STORE)
-    cert = select_cert.sync_from_store(
-        store_path,
-        candidate.domain,
-        base / "config" / "ssl",
-        base / "cert-source.json",
-        primary_ip=primary_ip,
-    )
-    final = gitlab_config.Settings(
-        domain=cert.domain,
-        https_port=candidate.https_port,
-        http_port=candidate.http_port,
-        ssh_port=candidate.ssh_port,
-        timezone=candidate.timezone,
-    )
-    _validate_or_raise(final, None, check_ports=False)
-    config_changed = gitlab_config.write_if_changed(
-        base / "config" / "gitlab.rb", gitlab_config.render_gitlab_rb(final)
-    )
-    gitlab_config.write_if_changed(settings_path, gitlab_config.settings_to_env(candidate))
+        store_path = Path(store or env.get("GITLAB_CERT_STORE") or DEFAULT_STORE)
+        cert = select_cert.sync_from_store(
+            store_path,
+            candidate.domain,
+            base / "config" / "ssl",
+            base / "cert-source.json",
+            primary_ip=primary_ip,
+        )
+        final = gitlab_config.Settings(
+            domain=cert.domain,
+            https_port=candidate.https_port,
+            http_port=candidate.http_port,
+            ssh_port=candidate.ssh_port,
+            timezone=candidate.timezone,
+        )
+        _validate_or_raise(final, None, check_ports=False)
+        config_changed = gitlab_config.write_if_changed(
+            base / "config" / "gitlab.rb", gitlab_config.render_gitlab_rb(final)
+        )
+        gitlab_config.write_if_changed(
+            settings_path, gitlab_config.settings_to_env(candidate)
+        )
+    except OSError as exc:
+        raise SyncError(1, f"cannot write GitLab configuration: {exc}") from exc
     if config_changed or cert.changed:
         _log(
             base,

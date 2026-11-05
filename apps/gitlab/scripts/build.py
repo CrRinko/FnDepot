@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import os
 import re
@@ -51,6 +52,12 @@ CMD_SCRIPTS = [
 ]
 
 MAX_FPK_SIZE = 1024 * 1024
+PRIVATE_IP_RE = re.compile(
+    r"\b(?:10|192\\.168|172\\.(?:1[6-9]|2\\d|3[01]))\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b"
+)
+CGNAT_RE = re.compile(
+    r"\b100\\.(?:6[4-9]|[7-9]\\d|1[01]\\d|12[0-7])\\.\\d{1,3}\\.\\d{1,3}\\b"
+)
 
 
 class BuildError(RuntimeError):
@@ -135,9 +142,6 @@ def ensure_fnpack(explicit: Path | None) -> Path:
 def privacy_scan() -> None:
     phone_re = re.compile(r"(?<!\d)\d{11,}(?!\d)")
     email_re = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
-    private_ip_re = re.compile(
-        r"\b(?:10|192\.168|172\.(?:1[6-9]|2\d|3[01]))\.\d{1,3}\.\d{1,3}\.\d{1,3}\b"
-    )
     excluded = {".cache", "dist", "__pycache__", "tests"}
     for path in APP_DIR.rglob("*"):
         if not path.is_file():
@@ -156,8 +160,10 @@ def privacy_scan() -> None:
                 raise BuildError(f"privacy scan: phone-like number in {path}:{lineno}: {match}")
             for match in email_re.findall(line):
                 raise BuildError(f"privacy scan: email in {path}:{lineno}: {match}")
-            for match in private_ip_re.findall(line):
+            for match in PRIVATE_IP_RE.findall(line):
                 raise BuildError(f"privacy scan: private IP in {path}:{lineno}: {match}")
+            for match in CGNAT_RE.findall(line):
+                raise BuildError(f"privacy scan: CGNAT IP in {path}:{lineno}: {match}")
             if "PRIVATE KEY" in line or "BEGIN CERTIFICATE" in line:
                 raise BuildError(f"privacy scan: key/certificate material in {path}:{lineno}")
 
@@ -352,12 +358,22 @@ def verify_fpk(artifact: Path, app_version: str) -> dict[str, object]:
     for name in required_outer:
         if name not in names:
             raise BuildError(f"FPK is missing {name}")
-    with tarfile.open(fileobj=__import__("io").BytesIO(app_bytes), mode="r:gz") as inner:
+    with tarfile.open(fileobj=io.BytesIO(app_bytes), mode="r:gz") as inner:
         inner_names = inner.getnames()
         required_inner = ["docker/docker-compose.yaml", "ui/config", "ui/images/icon_64.png", "ui/images/icon_256.png"]
         for name in required_inner:
             if name not in inner_names:
                 raise BuildError(f"app.tgz is missing {name}")
+        for name in inner_names:
+            if name.endswith((".py", ".sh", ".yaml", ".json", ".txt")) or name == "ui/config":
+                member = inner.extractfile(name)
+                if member is None:
+                    continue
+                text = member.read().decode("utf-8", "ignore")
+                if "PRIVATE KEY" in text or "BEGIN CERTIFICATE" in text:
+                    raise BuildError(f"key/certificate material in app.tgz: {name}")
+                if PRIVATE_IP_RE.search(text) or CGNAT_RE.search(text):
+                    raise BuildError(f"private/CGNAT IP in app.tgz: {name}")
         for name in inner_names + names:
             if name.endswith((".key", ".crt", ".pem")) or name.endswith("settings.env"):
                 raise BuildError(f"secret material in FPK: {name}")
@@ -376,7 +392,7 @@ def md5_file_bytes(data: bytes) -> str:
     return hashlib.md5(data).hexdigest()
 
 
-def stage_package(app_version: str, revision: str) -> Path:
+def stage_package(app_version: str) -> Path:
     root = Path(tempfile.mkdtemp(prefix="gitlab-fpk-stage-"))
     stage = root / "stage"
     shutil.copytree(PACKAGE_DIR, stage)
@@ -392,6 +408,7 @@ def stage_package(app_version: str, revision: str) -> Path:
 
 
 def build(args: argparse.Namespace) -> int:
+    check_only()
     version = VERSION_FILE.read_text(encoding="utf-8").strip()
     app_version = (args.app_version or APP_VERSION_FILE.read_text(encoding="utf-8").strip()).strip()
     if app_version != version and not app_version.startswith(version + "."):
@@ -405,7 +422,7 @@ def build(args: argparse.Namespace) -> int:
     if provenance.get("image", {}).get("tag") != "19.5.3-ce.0":
         raise BuildError("provenance image tag mismatch")
     fnpack = ensure_fnpack(args.fnpack)
-    stage_root = stage_package(app_version, revision)
+    stage_root = stage_package(app_version)
     stage = stage_root / "stage"
     try:
         artifact = run_fnpack(fnpack, stage, args.out, app_version, suffix)
