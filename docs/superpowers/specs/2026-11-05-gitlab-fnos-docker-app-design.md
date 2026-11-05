@@ -330,7 +330,7 @@ openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
 - `start`：`sync_config`，然后 `docker compose -p gitlab up -d`，检查容器状态。
 - `stop`：`docker compose -p gitlab stop`。
 - `status`：
-  1. 以 root 修正 `${TRIM_PKGVAR}` 及子目录属主（必要时 `chown -R docker-gitlab:docker-gitlab`）。
+  1. 以 root 修正 `${TRIM_PKGVAR}/config`、`config/ssl` 和 `settings.env` 的属主，使包用户可写；不要递归修改 `data`/`logs`（由 GitLab 容器管理）。
   2. `sync_config`：读取环境变量或 `settings.env`，校验；非法时回退到 `settings.env`；重新选择证书；渲染 `gitlab.rb`；比较哈希。
   3. 如果配置哈希变化：`docker compose up -d` 后 `docker restart gitlab`。
   4. 如果仅证书变化：`gitlab-ctl hup nginx`。
@@ -400,7 +400,7 @@ openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
 
 | 风险 | 影响 | 处理 |
 | --- | --- | --- |
-| 应用中心先启动 compose，包用户无法写配置 | 首次配置错误或安装失败 | `cmd/main` 以 root chown 并重写配置；install_callback 写入失败不阻断安装 |
+| 应用中心先启动 compose，包用户无法写配置 | 首次配置错误或安装失败 | `cmd/main` 以 root 修正 `config`/`config/ssl` 和 `settings.env` 的属主并重写配置；不递归改 `data`/`logs`；install_callback 写入失败不阻断安装 |
 | fnOS 证书库格式/权限变化 | 无法读取系统证书 | 保留自签名回退；`cmd/main` 以 root 读取；README 说明手动放置证书 |
 | 8443 端口被占用 | 启动失败 | install/config 预检，给出明确错误 |
 | 镜像拉取失败/超时 | 首次安装失败 | 文档说明重试；可使用 NAS 的 registry mirror；不把镜像打进 FPK |
